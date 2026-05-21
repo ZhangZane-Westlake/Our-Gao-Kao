@@ -95,6 +95,58 @@ npm run preview
 
 图片先不要加入项目。当前版本用占位画面显示资源 key。后续建议按 16:9 横图优先提供场景图，人物可提供立绘或直接融入场景 CG。
 
+## 批量生成图片
+
+项目提供了一个可替换 Key 和 BaseURL 的脚本：
+
+```bash
+python scripts/generate_assets.py
+```
+
+你需要先在 `scripts/generate_assets.py` 中替换：
+
+```python
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+OPENAI_API_KEY = "REPLACE_WITH_YOUR_API_KEY"
+IMAGE_MODEL = "gpt-image-2"
+```
+
+也可以用环境变量覆盖：
+
+```bash
+OPENAI_BASE_URL="https://api.openai.com/v1" \
+OPENAI_API_KEY="你的 API Key" \
+OPENAI_IMAGE_MODEL="gpt-image-2" \
+python scripts/generate_assets.py
+```
+
+常用参数：
+
+```bash
+# 只生成场景图
+python scripts/generate_assets.py --only scene
+
+# 只生成人物图
+python scripts/generate_assets.py --only character
+
+# 只生成指定图片
+python scripts/generate_assets.py --keys scene_oath_playground protagonist_exam_uniform
+
+# 覆盖已有图片
+python scripts/generate_assets.py --overwrite
+```
+
+输出目录：
+
+- 场景图：`public/assets/generated/scenes`
+- 人物图：`public/assets/generated/characters`
+
+人物图会优先请求透明背景 PNG。如果目标模型或代理接口不支持透明背景，脚本会自动重试为纯绿色背景，并在安装 Pillow 时尝试本地去绿幕：
+
+```bash
+pip install pillow
+```
+
 ### 场景图
 
 1. `scene_oath_playground`：百日誓师操场。清晨操场、温暖阳光、蓝白校服学生宣誓；横幅写“百日誓师大会”，倒计时牌写“距离高考还有100天”。
