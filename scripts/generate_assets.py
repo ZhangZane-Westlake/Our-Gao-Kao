@@ -17,6 +17,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TypedDict, cast
@@ -30,6 +31,8 @@ OPENAI_PROJECT = ""
 
 OUTPUT_ROOT = Path("public/assets/generated")
 REQUEST_TIMEOUT_SECONDS = 240
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_RETRY_DELAY_SECONDS = 120.0
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -52,6 +55,16 @@ class ImageApiResponse(TypedDict, total=False):
     """Represents a minimal OpenAI-compatible image response."""
 
     data: list[ImageApiItem]
+
+
+class ImageRequestError(RuntimeError):
+    """HTTP error raised by the image API with a preserved response body."""
+
+    def __init__(self, status_code: int, response_body: str) -> None:
+        """Initializes the request error."""
+        super().__init__(f"HTTP {status_code}: {response_body}")
+        self.status_code = status_code
+        self.response_body = response_body
 
 
 @dataclass(frozen=True)
@@ -484,7 +497,7 @@ def build_image_request(asset: ImageAsset, force_chroma_background: bool, compat
     return request_body
 
 
-def request_image(asset: ImageAsset, force_chroma_background: bool, compatibility_mode: bool) -> bytes:
+def request_image_once(asset: ImageAsset, force_chroma_background: bool, compatibility_mode: bool) -> bytes:
     """Requests one image and returns its PNG bytes."""
     url = f"{get_base_url()}/images/generations"
     request_body = build_image_request(asset, force_chroma_background, compatibility_mode)
@@ -496,8 +509,12 @@ def request_image(asset: ImageAsset, force_chroma_background: bool, compatibilit
         method="POST",
     )
 
-    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-        response_text = response.read().decode("utf-8")
+    try:
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+            response_text = response.read().decode("utf-8")
+    except urllib.error.HTTPError as error:
+        error_body = error.read().decode("utf-8", errors="replace")
+        raise ImageRequestError(error.code, error_body) from error
 
     parsed_response = cast(ImageApiResponse, json.loads(response_text))
     first_item = parsed_response.get("data", [{}])[0]
@@ -509,6 +526,56 @@ def request_image(asset: ImageAsset, force_chroma_background: bool, compatibilit
         return download_image(first_item["url"])
 
     raise RuntimeError(f"No image data returned for {asset.key}. Response: {response_text[:500]}")
+
+
+def request_image(
+    asset: ImageAsset,
+    force_chroma_background: bool,
+    compatibility_mode: bool,
+    max_retries: int,
+    retry_delay_seconds: float,
+) -> bytes:
+    """Requests one image with retries for gateway timeouts and rate limits."""
+    attempt = 0
+
+    while True:
+        try:
+            return request_image_once(asset, force_chroma_background, compatibility_mode)
+        except ImageRequestError as error:
+            attempt += 1
+
+            if attempt > max_retries or not is_retryable_error(error):
+                raise
+
+            delay_seconds = get_retry_delay_seconds(error.response_body, retry_delay_seconds, attempt)
+            print(
+                f"WARN  {asset.key} request failed with HTTP {error.status_code}; "
+                f"retry {attempt}/{max_retries} after {delay_seconds:.0f}s."
+            )
+            time.sleep(delay_seconds)
+
+
+def is_retryable_error(error: ImageRequestError) -> bool:
+    """Returns True when an image request error is worth retrying."""
+    if error.status_code in {408, 409, 425, 429, 500, 502, 503, 504, 520, 522, 523, 524}:
+        return True
+
+    return '"retryable":true' in error.response_body or '"retryable": true' in error.response_body
+
+
+def get_retry_delay_seconds(response_body: str, fallback_delay: float, attempt: int) -> float:
+    """Extracts retry_after from an error body, falling back to exponential delay."""
+    try:
+        parsed_body = json.loads(response_body)
+    except json.JSONDecodeError:
+        return fallback_delay * attempt
+
+    retry_after = parsed_body.get("retry_after")
+
+    if isinstance(retry_after, (int, float)):
+        return float(retry_after)
+
+    return fallback_delay * attempt
 
 
 def download_image(url: str) -> bytes:
@@ -560,7 +627,13 @@ def should_skip(path: Path, overwrite: bool) -> bool:
     return path.exists() and not overwrite
 
 
-def generate_asset(asset: ImageAsset, overwrite: bool, sleep_seconds: float, compatibility_mode: bool) -> None:
+def generate_asset(
+    asset: ImageAsset,
+    overwrite: bool,
+    compatibility_mode: bool,
+    max_retries: int,
+    retry_delay_seconds: float,
+) -> None:
     """Generates one asset and writes it to disk."""
     path = output_path_for(asset)
 
@@ -571,18 +644,30 @@ def generate_asset(asset: ImageAsset, overwrite: bool, sleep_seconds: float, com
     print(f"START {asset.key} ({asset.name})")
 
     try:
-        image_bytes = request_image(asset, force_chroma_background=False, compatibility_mode=compatibility_mode)
+        image_bytes = request_image(
+            asset,
+            force_chroma_background=False,
+            compatibility_mode=compatibility_mode,
+            max_retries=max_retries,
+            retry_delay_seconds=retry_delay_seconds,
+        )
         save_bytes(path, image_bytes)
-    except urllib.error.HTTPError as error:
-        error_body = error.read().decode("utf-8", errors="replace")
+    except ImageRequestError as error:
+        error_body = error.response_body
         if asset.transparent_background:
             print(f"WARN  transparent request failed for {asset.key}; retrying with chroma background.")
-            print(f"WARN  original error: {error.code} {error_body[:240]}")
-            image_bytes = request_image(asset, force_chroma_background=True, compatibility_mode=compatibility_mode)
+            print(f"WARN  original error: {error.status_code} {error_body[:240]}")
+            image_bytes = request_image(
+                asset,
+                force_chroma_background=True,
+                compatibility_mode=compatibility_mode,
+                max_retries=max_retries,
+                retry_delay_seconds=retry_delay_seconds,
+            )
             save_bytes(path, image_bytes)
             cleaned = remove_chroma_background_if_possible(path)
             print(f"INFO  chroma cleanup {'done' if cleaned else 'skipped; install pillow for local cleanup'}")
-        elif error.code == 403 and "1010" in error_body:
+        elif error.status_code == 403 and "1010" in error_body:
             raise RuntimeError(
                 "Image generation was blocked with HTTP 403 / code 1010. "
                 "This usually means the API gateway/CDN rejected the request client. "
@@ -592,12 +677,9 @@ def generate_asset(asset: ImageAsset, overwrite: bool, sleep_seconds: float, com
                 f"Original response: {error_body}"
             ) from error
         else:
-            raise RuntimeError(f"Image generation failed for {asset.key}: {error.code} {error_body}") from error
+            raise RuntimeError(f"Image generation failed for {asset.key}: {error.status_code} {error_body}") from error
 
     print(f"DONE  {asset.key} -> {path}")
-
-    if sleep_seconds > 0:
-        time.sleep(sleep_seconds)
 
 
 def parse_args() -> argparse.Namespace:
@@ -606,7 +688,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--only", choices=["scene", "character"], help="Generate only scene images or only character images.")
     parser.add_argument("--keys", nargs="*", help="Generate only assets with these keys.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing image files.")
-    parser.add_argument("--sleep", type=float, default=1.0, help="Seconds to wait between requests.")
+    parser.add_argument("--sleep", type=float, default=0.0, help="Seconds to wait before submitting each request batch item.")
+    parser.add_argument("--concurrency", type=int, default=6, help="Maximum number of image requests to run concurrently.")
+    parser.add_argument("--retries", type=int, default=DEFAULT_MAX_RETRIES, help="Retry count for timeout, rate-limit, and gateway errors.")
+    parser.add_argument("--retry-delay", type=float, default=DEFAULT_RETRY_DELAY_SECONDS, help="Fallback seconds between retries.")
     parser.add_argument(
         "--compat",
         action="store_true",
@@ -637,6 +722,50 @@ def validate_configuration() -> None:
         )
 
 
+def generate_assets_concurrently(
+    assets: list[ImageAsset],
+    overwrite: bool,
+    compatibility_mode: bool,
+    concurrency: int,
+    sleep_seconds: float,
+    max_retries: int,
+    retry_delay_seconds: float,
+) -> None:
+    """Generates assets with a bounded thread pool and reports all failures."""
+    max_workers = max(1, concurrency)
+    failures: list[tuple[str, str]] = []
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_asset: dict[object, ImageAsset] = {}
+
+        for asset in assets:
+            if sleep_seconds > 0:
+                time.sleep(sleep_seconds)
+
+            future = executor.submit(
+                generate_asset,
+                asset,
+                overwrite,
+                compatibility_mode,
+                max_retries,
+                retry_delay_seconds,
+            )
+            future_to_asset[future] = asset
+
+        for future in as_completed(future_to_asset):
+            asset = future_to_asset[future]
+            try:
+                future.result()
+            except Exception as error:
+                failures.append((asset.key, str(error)))
+
+    if failures:
+        print("\nFAILED ASSETS")
+        for asset_key, message in failures:
+            print(f"- {asset_key}: {message}")
+        raise RuntimeError(f"{len(failures)} asset generation task(s) failed.")
+
+
 def main() -> None:
     """Runs the batch image generation workflow."""
     args = parse_args()
@@ -651,9 +780,18 @@ def main() -> None:
     print(f"Output: {OUTPUT_ROOT}")
     print(f"Count: {len(assets_to_generate)}")
     print(f"Compatibility mode: {'on' if args.compat else 'off'}")
+    print(f"Concurrency: {max(1, args.concurrency)}")
+    print(f"Retries: {max(0, args.retries)}")
 
-    for asset in assets_to_generate:
-        generate_asset(asset, overwrite=args.overwrite, sleep_seconds=args.sleep, compatibility_mode=args.compat)
+    generate_assets_concurrently(
+        assets=assets_to_generate,
+        overwrite=args.overwrite,
+        compatibility_mode=args.compat,
+        concurrency=args.concurrency,
+        sleep_seconds=args.sleep,
+        max_retries=max(0, args.retries),
+        retry_delay_seconds=args.retry_delay,
+    )
 
 
 if __name__ == "__main__":

@@ -135,6 +135,12 @@ python scripts/generate_assets.py --keys scene_oath_playground protagonist_exam_
 # 覆盖已有图片
 python scripts/generate_assets.py --overwrite
 
+# 默认并发 6 份请求；也可以手动调整
+python scripts/generate_assets.py --concurrency 6
+
+# 代理超时或限流时自动重试，默认重试 3 次
+python scripts/generate_assets.py --retries 3 --retry-delay 120
+
 # 第三方代理不支持 quality/background/output_format 等参数时使用兼容模式
 python scripts/generate_assets.py --compat
 ```
@@ -150,6 +156,12 @@ python scripts/generate_assets.py --compat
 ```
 
 如果还是 403，需要确认该服务商是否允许服务端脚本访问 `/v1/images/generations`，以及你的 Key 是否开通图片生成权限。
+
+如果遇到 `HTTP Error 524`，说明 Cloudflare 已连接到服务商源站，但源站在 120 秒内没有返回完整生图结果。脚本会对 `524`、`429` 和常见 `5xx` 自动重试；如果仍频繁出现，建议降低并发或分批生成：
+
+```bash
+python scripts/generate_assets.py --compat --concurrency 2 --retries 5 --retry-delay 120
+```
 
 输出目录：
 
