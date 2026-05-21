@@ -111,10 +111,10 @@ OPENAI_API_KEY = "REPLACE_WITH_YOUR_API_KEY"
 IMAGE_MODEL = "gpt-image-2"
 ```
 
-也可以用环境变量覆盖：
+更推荐用环境变量覆盖，避免把 API Key 写入仓库：
 
 ```bash
-OPENAI_BASE_URL="https://api.openai.com/v1" \
+OPENAI_BASE_URL="https://api.kaopuapi.xyz/v1" \
 OPENAI_API_KEY="你的 API Key" \
 OPENAI_IMAGE_MODEL="gpt-image-2" \
 python scripts/generate_assets.py
@@ -134,7 +134,22 @@ python scripts/generate_assets.py --keys scene_oath_playground protagonist_exam_
 
 # 覆盖已有图片
 python scripts/generate_assets.py --overwrite
+
+# 第三方代理不支持 quality/background/output_format 等参数时使用兼容模式
+python scripts/generate_assets.py --compat
 ```
+
+如果遇到 `HTTP Error 403` 且返回 `error code: 1010`，通常是第三方 API 网关/CDN 拒绝了默认 Python 请求客户端。脚本已经默认发送浏览器风格的 `User-Agent`。如果仍然报错，可以显式设置：
+
+```bash
+OPENAI_HTTP_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36" \
+OPENAI_BASE_URL="https://api.kaopuapi.xyz/v1" \
+OPENAI_API_KEY="你的 API Key" \
+OPENAI_IMAGE_MODEL="gpt-image-2" \
+python scripts/generate_assets.py --compat
+```
+
+如果还是 403，需要确认该服务商是否允许服务端脚本访问 `/v1/images/generations`，以及你的 Key 是否开通图片生成权限。
 
 输出目录：
 

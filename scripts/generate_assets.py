@@ -22,12 +22,19 @@ from pathlib import Path
 from typing import Literal, TypedDict, cast
 
 
-OPENAI_BASE_URL = "https://api.openai.com/v1"
+OPENAI_BASE_URL = "https://api.kaopuapi.xyz/v1"
 OPENAI_API_KEY = "REPLACE_WITH_YOUR_API_KEY"
 IMAGE_MODEL = "gpt-image-2"
+OPENAI_ORGANIZATION = ""
+OPENAI_PROJECT = ""
 
 OUTPUT_ROOT = Path("public/assets/generated")
 REQUEST_TIMEOUT_SECONDS = 240
+DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/125.0.0.0 Safari/537.36"
+)
 
 
 AssetKind = Literal["scene", "character"]
@@ -419,7 +426,38 @@ def get_model_name() -> str:
     return os.getenv("OPENAI_IMAGE_MODEL", IMAGE_MODEL)
 
 
-def build_image_request(asset: ImageAsset, force_chroma_background: bool) -> dict[str, object]:
+def get_user_agent() -> str:
+    """Returns the HTTP user agent used for image API requests."""
+    return os.getenv("OPENAI_HTTP_USER_AGENT", DEFAULT_USER_AGENT)
+
+
+def get_optional_header_value(env_name: str, fallback_value: str) -> str | None:
+    """Returns an optional header value from an env var or script constant."""
+    value = os.getenv(env_name, fallback_value).strip()
+    return value or None
+
+
+def build_headers() -> dict[str, str]:
+    """Builds HTTP headers for OpenAI-compatible image API requests."""
+    headers = {
+        "Authorization": f"Bearer {get_api_key()}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": get_user_agent(),
+    }
+    organization = get_optional_header_value("OPENAI_ORGANIZATION", OPENAI_ORGANIZATION)
+    project = get_optional_header_value("OPENAI_PROJECT", OPENAI_PROJECT)
+
+    if organization:
+        headers["OpenAI-Organization"] = organization
+
+    if project:
+        headers["OpenAI-Project"] = project
+
+    return headers
+
+
+def build_image_request(asset: ImageAsset, force_chroma_background: bool, compatibility_mode: bool) -> dict[str, object]:
     """Builds an OpenAI-compatible image generation request body."""
     prompt = asset.prompt
     request_body: dict[str, object] = {
@@ -427,11 +465,13 @@ def build_image_request(asset: ImageAsset, force_chroma_background: bool) -> dic
         "prompt": prompt,
         "n": 1,
         "size": asset.size,
-        "quality": "high",
-        "output_format": "png",
     }
 
-    if asset.transparent_background and not force_chroma_background:
+    if not compatibility_mode:
+        request_body["quality"] = "high"
+        request_body["output_format"] = "png"
+
+    if asset.transparent_background and not force_chroma_background and not compatibility_mode:
         request_body["background"] = "transparent"
 
     if asset.transparent_background and force_chroma_background:
@@ -444,18 +484,15 @@ def build_image_request(asset: ImageAsset, force_chroma_background: bool) -> dic
     return request_body
 
 
-def request_image(asset: ImageAsset, force_chroma_background: bool) -> bytes:
+def request_image(asset: ImageAsset, force_chroma_background: bool, compatibility_mode: bool) -> bytes:
     """Requests one image and returns its PNG bytes."""
     url = f"{get_base_url()}/images/generations"
-    request_body = build_image_request(asset, force_chroma_background)
+    request_body = build_image_request(asset, force_chroma_background, compatibility_mode)
     request_bytes = json.dumps(request_body, ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(
         url=url,
         data=request_bytes,
-        headers={
-            "Authorization": f"Bearer {get_api_key()}",
-            "Content-Type": "application/json",
-        },
+        headers=build_headers(),
         method="POST",
     )
 
@@ -523,7 +560,7 @@ def should_skip(path: Path, overwrite: bool) -> bool:
     return path.exists() and not overwrite
 
 
-def generate_asset(asset: ImageAsset, overwrite: bool, sleep_seconds: float) -> None:
+def generate_asset(asset: ImageAsset, overwrite: bool, sleep_seconds: float, compatibility_mode: bool) -> None:
     """Generates one asset and writes it to disk."""
     path = output_path_for(asset)
 
@@ -534,17 +571,26 @@ def generate_asset(asset: ImageAsset, overwrite: bool, sleep_seconds: float) -> 
     print(f"START {asset.key} ({asset.name})")
 
     try:
-        image_bytes = request_image(asset, force_chroma_background=False)
+        image_bytes = request_image(asset, force_chroma_background=False, compatibility_mode=compatibility_mode)
         save_bytes(path, image_bytes)
     except urllib.error.HTTPError as error:
         error_body = error.read().decode("utf-8", errors="replace")
         if asset.transparent_background:
             print(f"WARN  transparent request failed for {asset.key}; retrying with chroma background.")
             print(f"WARN  original error: {error.code} {error_body[:240]}")
-            image_bytes = request_image(asset, force_chroma_background=True)
+            image_bytes = request_image(asset, force_chroma_background=True, compatibility_mode=compatibility_mode)
             save_bytes(path, image_bytes)
             cleaned = remove_chroma_background_if_possible(path)
             print(f"INFO  chroma cleanup {'done' if cleaned else 'skipped; install pillow for local cleanup'}")
+        elif error.code == 403 and "1010" in error_body:
+            raise RuntimeError(
+                "Image generation was blocked with HTTP 403 / code 1010. "
+                "This usually means the API gateway/CDN rejected the request client. "
+                "The script now sends a browser-like User-Agent; if this still happens, "
+                "set OPENAI_HTTP_USER_AGENT to a browser UA string, confirm the API key is valid for image generation, "
+                "or ask the provider to allow server-side API calls to /v1/images/generations. "
+                f"Original response: {error_body}"
+            ) from error
         else:
             raise RuntimeError(f"Image generation failed for {asset.key}: {error.code} {error_body}") from error
 
@@ -561,6 +607,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keys", nargs="*", help="Generate only assets with these keys.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing image files.")
     parser.add_argument("--sleep", type=float, default=1.0, help="Seconds to wait between requests.")
+    parser.add_argument(
+        "--compat",
+        action="store_true",
+        help="Send only model, prompt, n, and size. Use this for third-party API gateways that reject newer image parameters.",
+    )
     return parser.parse_args()
 
 
@@ -599,9 +650,10 @@ def main() -> None:
     print(f"Model: {get_model_name()}")
     print(f"Output: {OUTPUT_ROOT}")
     print(f"Count: {len(assets_to_generate)}")
+    print(f"Compatibility mode: {'on' if args.compat else 'off'}")
 
     for asset in assets_to_generate:
-        generate_asset(asset, overwrite=args.overwrite, sleep_seconds=args.sleep)
+        generate_asset(asset, overwrite=args.overwrite, sleep_seconds=args.sleep, compatibility_mode=args.compat)
 
 
 if __name__ == "__main__":
