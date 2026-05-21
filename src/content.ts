@@ -1,535 +1,711 @@
-import type { CharacterProfile, PlayerAction, StoryEvent } from "./types";
+import type { AssetRequirement, SceneId, SpeakerId, StatKey, VisualNovelScene } from "./types";
 
-export const period_labels: Record<string, string> = {
-  daytime: "白天",
-  evening: "晚自习",
-  night: "睡前"
+export const speaker_labels: Record<SpeakerId, string> = {
+  narrator: "旁白",
+  teacher: "班主任",
+  protagonist: "主角",
+  deskmate: "同桌",
+  friend_1: "朋友1",
+  friend_2: "朋友2",
+  mother: "母亲",
+  father: "父亲",
+  courier: "快递员"
 };
 
-export const scene_labels: Record<string, string> = {
-  classroom: "教室",
-  bedroom: "卧室",
-  track: "操场",
-  office: "办公室",
-  home: "家里",
-  canteen: "食堂"
+export const stat_labels: Record<StatKey, string> = {
+  mindset: "心态",
+  pressure: "压力",
+  strategy: "策略",
+  stability: "稳定",
+  stamina: "体力",
+  support: "支持",
+  confidence: "信心",
+  growth: "成长"
 };
 
-export const character_profiles: CharacterProfile[] = [
+export const scene_order: SceneId[] = [
+  "act_01_oath",
+  "act_02_mock_failure",
+  "act_03_review_unlock",
+  "act_04_friend_boundary",
+  "act_05_family_talk",
+  "act_06_progress",
+  "act_07_low_point",
+  "act_08_exam_day",
+  "act_09_admission"
+];
+
+export const visual_novel_scenes: VisualNovelScene[] = [
   {
-    id: "steady",
-    name: "稳定型",
-    summary: "基础均衡，情绪也还算稳。你习惯把事情放进计划里，一格一格地完成。",
-    opening: "开学第一天，你把新发的倒计时表压在透明桌垫下。纸边还很平整，像某种尚未被揉皱的决心。",
-    stats: { score: 58, energy: 72, mindset: 68, health: 72, relations: 60, family: 58 },
-    hidden: { focus: 64, pressure: 45, phone_dependency: 32, resilience: 60 }
+    id: "act_01_oath",
+    act: 1,
+    title: "百日誓师，游戏开始",
+    subtitle: "清晨的操场上，倒计时牌像一声被写出来的心跳。",
+    days_left: 100,
+    status_text: "迷茫",
+    background_key: "scene_oath_playground",
+    character_keys: ["protagonist_uniform_bag", "teacher_playground"],
+    real_text: ["距离高考还有100天", "百日誓师大会"],
+    ui_text: ["高三副本开启", "剩余时间：100天", "当前状态：迷茫", "请选择你的初始路线"],
+    narration:
+      "红色横幅在风里轻轻晃。你跟着人群举起拳头，声音混在几百个同龄人的宣誓里，却总觉得自己的那一句慢了半拍。",
+    dialogue: [
+      { speaker: "teacher", text: "最后一百天，你们不只是为了一个分数，更是为了知道自己能走到哪里。" },
+      { speaker: "teacher", text: "你的目标是什么？" },
+      { speaker: "protagonist", text: "……" },
+      { speaker: "narrator", text: "你没有立刻回答，只是望向操场边的倒计时牌。数字很大，大到像把未来也照亮了一点。" }
+    ],
+    choice_prompt: "请选择你的初始路线",
+    choice_mode: "single",
+    next_scene_id: "act_02_mock_failure",
+    choices: [
+      {
+        id: "hot_blood",
+        label: "热血冲刺",
+        quote: "我要拼一次，看看自己能不能再往前走。",
+        consequence: "你把迷茫暂时压进胸口，用更响的宣誓声盖住了不安。接下来几天，你会更容易进入冲刺状态，也更容易忽略疲惫。",
+        effects: { mindset: 6, pressure: 6, stamina: -4, confidence: 4 },
+        unlocks: ["热血开局"],
+        recommended: false
+      },
+      {
+        id: "steady_start",
+        label: "稳扎稳打",
+        quote: "我先把今天能做好的事做好。",
+        consequence: "你没有给自己喊很大的口号，只在心里把今天的任务排成一小列。它们不耀眼，但看起来能一步一步走完。",
+        effects: { stability: 8, pressure: -2, strategy: 4, mindset: 3 },
+        unlocks: ["每日计划"],
+        recommended: false
+      },
+      {
+        id: "search_answer",
+        label: "寻找答案",
+        quote: "我还不知道答案，但我想认真找一找。",
+        consequence: "你承认自己还不知道目标。奇怪的是，说出这件事以后，胸口反而松了一点。至少，从今天开始你不再假装已经懂了。",
+        effects: { growth: 8, mindset: 5, pressure: -3, strategy: 3 },
+        unlocks: ["认真走完这一百天"],
+        recommended: true
+      }
+    ]
   },
   {
-    id: "biased",
-    name: "偏科型",
-    summary: "强项能给你底气，弱项总在深夜冒出来提醒你。",
-    opening: "你翻开错题本，最厚的那一叠总是某一科。你不是不知道问题在哪里，只是每次靠近它，都像推开一扇很重的门。",
-    stats: { score: 54, energy: 70, mindset: 60, health: 70, relations: 58, family: 55 },
-    hidden: { focus: 60, pressure: 52, phone_dependency: 34, resilience: 62 }
+    id: "act_02_mock_failure",
+    act: 2,
+    title: "一模碰壁",
+    subtitle: "成绩单很薄，落在手里却有重量。",
+    days_left: 82,
+    status_text: "受挫",
+    background_key: "scene_mock_score_classroom",
+    character_keys: ["protagonist_tired_uniform", "teacher_classroom", "deskmate_uniform"],
+    real_text: ["一模成绩"],
+    ui_text: ["事件触发：一模失利", "心态 -12", "压力 +15", "请选择应对方式"],
+    narration:
+      "你确实努力过。清晨背书、晚自习刷题、深夜台灯下揉眼睛，这些画面一格一格闪回。可成绩单上的排名没有替它们作证。",
+    dialogue: [
+      { speaker: "teacher", text: "成绩只是反馈，不是判决。" },
+      { speaker: "deskmate", text: "你还继续这么学吗？" },
+      { speaker: "protagonist", text: "……" },
+      { speaker: "narrator", text: "你看着成绩单，手指把纸边攥出浅浅的折痕。失望没有砸下来，只是慢慢坐到了你旁边。" }
+    ],
+    choice_prompt: "请选择应对方式",
+    choice_mode: "single",
+    next_scene_id: "act_03_review_unlock",
+    choices: [
+      {
+        id: "push_harder",
+        label: "继续硬拼",
+        quote: "可能是我还不够努力。",
+        consequence: "你把原因先归到努力不够上。短期里，这会让你重新动起来；但如果方向没有改变，疲惫也会跟着一起累积。",
+        effects: { pressure: 12, stamina: -10, mindset: -4, confidence: 2 },
+        unlocks: ["硬拼惯性"],
+        recommended: false
+      },
+      {
+        id: "begin_review",
+        label: "开始复盘",
+        quote: "先看看我到底错在哪里。",
+        consequence: "你没有急着把下一套卷子摊开，而是把错题按原因分成几类。分数仍然刺眼，但它开始变得可拆解。",
+        effects: { strategy: 12, stability: 5, pressure: -4, growth: 5 },
+        unlocks: ["错因意识"],
+        recommended: true
+      },
+      {
+        id: "talk_teacher",
+        label: "找老师聊聊",
+        quote: "我需要知道问题出在哪里。",
+        consequence: "你第一次带着成绩单走进办公室。问出口以前很难，问出口以后，问题忽然不再只属于你一个人。",
+        effects: { support: 8, strategy: 8, pressure: -6, mindset: 3 },
+        unlocks: ["老师建议"],
+        recommended: false
+      }
+    ]
   },
   {
-    id: "strained",
-    name: "压力型",
-    summary: "成绩不错，但你已经很久没有真正放松过。",
-    opening: "黑板上的倒计时还没写完，胸口先替你数了一遍。你知道自己能考好，也知道这种知道有时候很累。",
-    stats: { score: 66, energy: 58, mindset: 42, health: 62, relations: 52, family: 48 },
-    hidden: { focus: 68, pressure: 70, phone_dependency: 30, resilience: 46 }
+    id: "act_03_review_unlock",
+    act: 3,
+    title: "策略调整，解锁复盘",
+    subtitle: "努力开始有方向，是从承认错因的那一刻开始的。",
+    days_left: 76,
+    status_text: "调整",
+    background_key: "scene_review_classroom",
+    character_keys: ["protagonist_review_uniform", "teacher_classroom"],
+    real_text: ["审题错误", "基础漏洞", "时间不够", "计算失误", "最后一百天复习计划"],
+    ui_text: ["技能解锁：错题复盘 Lv.1", "策略 +15", "稳定 +8", "请选择复习路线"],
+    narration:
+      "课后教室比晚自习安静。你把一模试卷摊开，第一次没有急着订正答案，而是追问每一个红叉为什么会出现。",
+    dialogue: [
+      { speaker: "teacher", text: "不要只问自己有没有努力，也要问努力有没有方向。" },
+      { speaker: "teacher", text: "接下来，你想怎么重新安排？" },
+      { speaker: "protagonist", text: "我想先把错的原因找出来。" },
+      { speaker: "narrator", text: "错题本上的四个分类像四盏小灯。它们照不亮全部未来，但足够照见下一步。" }
+    ],
+    choice_prompt: "请选择复习路线",
+    choice_mode: "single",
+    next_scene_id: "act_04_friend_boundary",
+    choices: [
+      {
+        id: "mistake_review_route",
+        label: "错题复盘路线",
+        quote: "每天整理错因，把同类问题彻底解决。",
+        consequence: "你给错题本留出固定时间。它不总是让人有成就感，却让你越来越少在同一个地方摔倒。",
+        effects: { strategy: 15, stability: 8, pressure: -4, growth: 6 },
+        unlocks: ["错题复盘 Lv.1"],
+        recommended: true
+      },
+      {
+        id: "foundation_route",
+        label: "基础重建路线",
+        quote: "先把最容易丢分的基础补回来。",
+        consequence: "你把那些看起来不够高级的基础题重新捡起来。它们很朴素，却让卷面慢慢有了底。",
+        effects: { stability: 12, strategy: 9, confidence: 4, pressure: -2 },
+        unlocks: ["基础重建"],
+        recommended: false
+      },
+      {
+        id: "peer_route",
+        label: "同伴学习路线",
+        quote: "和同学互相讲题，一起把问题讲明白。",
+        consequence: "你发现讲给别人听时，自己也会听见漏洞。朋友的进度不再只是压力，也能成为参照和支撑。",
+        effects: { support: 8, strategy: 8, growth: 7, stamina: -3 },
+        unlocks: ["同伴讲题"],
+        recommended: false
+      }
+    ]
   },
   {
-    id: "loose",
-    name: "松散型",
-    summary: "你不讨厌学习，只是总会被很多更轻的东西带走。",
-    opening: "你在课桌角落贴了一张新的便利贴，写着“这次认真一点”。字迹很好看，像每一次重新开始时的你。",
-    stats: { score: 45, energy: 76, mindset: 72, health: 74, relations: 66, family: 60 },
-    hidden: { focus: 42, pressure: 38, phone_dependency: 58, resilience: 56 }
+    id: "act_04_friend_boundary",
+    act: 4,
+    title: "友情与边界",
+    subtitle: "真正的关系，不一定要求你把自己全部交出去。",
+    days_left: 69,
+    status_text: "疲惫",
+    background_key: "scene_after_evening_school",
+    character_keys: ["protagonist_bag_notebook", "friend_1_uniform", "friend_2_uniform"],
+    real_text: ["晚自习结束"],
+    ui_text: ["支线事件：朋友的邀请", "体力：偏低", "心态：偏低", "请选择你的回应"],
+    narration:
+      "晚自习结束，教学楼还亮着一半。你抱着错题本走出教室，肩膀酸得像背了不止一个书包。",
+    dialogue: [
+      { speaker: "friend_1", text: "走啊，出去吃点东西，今晚别学了。" },
+      { speaker: "friend_2", text: "就半小时，放松一下。" },
+      { speaker: "protagonist", text: "可以，但半小时后我得回去。" },
+      { speaker: "narrator", text: "你看着他们，也看着手里的错题本。你忽然明白，拒绝和答应之间，还可以有一种叫边界的东西。" }
+    ],
+    choice_prompt: "请选择你的回应",
+    choice_mode: "single",
+    next_scene_id: "act_05_family_talk",
+    choices: [
+      {
+        id: "relax_together",
+        label: "一起放松",
+        quote: "好，今晚先不想学习了。",
+        consequence: "热汤和笑声把一整天的紧绷泡开了。你确实轻松了一点，也把原本计划好的复盘留给了明天。",
+        effects: { mindset: 9, support: 6, stamina: 4, strategy: -4 },
+        unlocks: ["短暂喘息"],
+        recommended: false
+      },
+      {
+        id: "direct_refusal",
+        label: "直接拒绝",
+        quote: "不去了，我还有很多没做完。",
+        consequence: "你守住了今晚的计划，却也看见朋友脸上一闪而过的失落。效率没有问题，心里却有一点空。",
+        effects: { strategy: 5, stability: 4, support: -5, pressure: 3 },
+        unlocks: ["独自推进"],
+        recommended: false
+      },
+      {
+        id: "time_boundary",
+        label: "约定时间",
+        quote: "可以，但半小时后我得回去。",
+        consequence: "你们去吃了一点东西，也真的在半小时后回来了。你没有牺牲全部计划，也没有把自己从朋友那里撤走。",
+        effects: { support: 8, mindset: 6, stability: 6, pressure: -3 },
+        unlocks: ["清晰边界"],
+        recommended: true
+      }
+    ]
   },
   {
-    id: "comeback",
-    name: "逆袭型",
-    summary: "起点不高，但你还有很多没有被证明过的可能。",
-    opening: "你坐在靠窗的位置，看见阳光落在卷子空白处。那一瞬间你忽然觉得，空白也不全是坏事，它至少还能被写上东西。",
-    stats: { score: 38, energy: 74, mindset: 64, health: 72, relations: 56, family: 54 },
-    hidden: { focus: 50, pressure: 46, phone_dependency: 40, resilience: 72 }
+    id: "act_05_family_talk",
+    act: 5,
+    title: "家庭沟通",
+    subtitle: "有些支持不是天生就会发生，它需要被说出来。",
+    days_left: 61,
+    status_text: "试着说明",
+    background_key: "scene_family_table",
+    character_keys: ["protagonist_white_tshirt_home", "mother_home", "father_home"],
+    real_text: ["本周复习计划", "错题分类", "睡眠时间"],
+    ui_text: ["支线事件：家庭沟通", "家庭压力 ↓", "支持值 ↑", "请选择回应方式"],
+    narration:
+      "餐桌上的灯很暖，暖到你更难开口。父母没有催排名，只是把饭菜往你面前推了推。",
+    dialogue: [
+      { speaker: "mother", text: "最近是不是很累？" },
+      { speaker: "father", text: "我们不是想给你压力，只是希望你别后悔。" },
+      { speaker: "protagonist", text: "我现在也会紧张，但我有在调整。" },
+      { speaker: "protagonist", text: "这是我接下来的复习安排。" },
+      { speaker: "mother", text: "那我们一起配合你。" }
+    ],
+    choice_prompt: "请选择回应方式",
+    choice_mode: "single",
+    next_scene_id: "act_06_progress",
+    choices: [
+      {
+        id: "avoid_silence",
+        label: "沉默回避",
+        quote: "我不想聊这个。",
+        consequence: "你把话吞了回去，房间也跟着安静下来。压力没有爆发，却也没有找到出口。",
+        effects: { pressure: 7, support: -5, mindset: -4, stamina: 1 },
+        unlocks: ["未说出口"],
+        recommended: false
+      },
+      {
+        id: "honest_state",
+        label: "说出真实状态",
+        quote: "我现在有压力，但我有在调整。",
+        consequence: "你没有把自己包装成完全没事。父母也没有立刻给答案，只是第一次更认真地听你说完。",
+        effects: { pressure: -7, support: 7, mindset: 5, growth: 5 },
+        unlocks: ["真实沟通"],
+        recommended: false
+      },
+      {
+        id: "show_plan",
+        label: "展示计划表",
+        quote: "这是我接下来的复习安排。",
+        consequence: "计划表铺在餐桌上，像把你心里的混乱翻译成他们能看懂的语言。你们开始讨论几点睡、哪天少问成绩。",
+        effects: { support: 12, pressure: -9, stability: 7, strategy: 5 },
+        unlocks: ["家庭支持"],
+        recommended: true
+      }
+    ]
+  },
+  {
+    id: "act_06_progress",
+    act: 6,
+    title: "阶段性进步",
+    subtitle: "进步不是烟花，更像每天准时亮起的一盏台灯。",
+    days_left: 45,
+    status_text: "回升",
+    background_key: "scene_second_mock_classroom",
+    character_keys: ["protagonist_clear_uniform", "teacher_classroom", "friend_1_uniform"],
+    real_text: ["二模成绩", "错题复盘"],
+    ui_text: ["阶段性进步", "信心 +12", "稳定 +8", "请选择下一步策略"],
+    narration:
+      "阳光从窗户落在桌面上。你看到自己的排名往前挪了一些，第一反应不是欢呼，而是不太确定地眨了眨眼。",
+    dialogue: [
+      { speaker: "teacher", text: "这次有些同学进步很明显，说明方法开始起作用了。" },
+      { speaker: "friend_1", text: "你真的追上来了。" },
+      { speaker: "protagonist", text: "先别飘，继续按节奏来。" },
+      { speaker: "narrator", text: "你轻轻合上成绩单，又翻开错题本。原来信心也可以很安静。" }
+    ],
+    choice_prompt: "请选择下一步策略",
+    choice_mode: "single",
+    next_scene_id: "act_07_low_point",
+    choices: [
+      {
+        id: "add_more",
+        label: "继续加码",
+        quote: "既然有效，那就再拼狠一点。",
+        consequence: "你想抓住上升的势头，把计划又压紧了一层。短期里分数还会动，但身体和心态会开始提醒你别越线。",
+        effects: { confidence: 8, strategy: 4, stamina: -10, pressure: 8 },
+        unlocks: ["加码冲刺"],
+        recommended: false
+      },
+      {
+        id: "keep_rhythm",
+        label: "保持节奏",
+        quote: "按现在的方法继续，不盲目加速。",
+        consequence: "你把进步当作反馈，而不是新的鞭子。节奏没有变快，却更稳了。",
+        effects: { confidence: 8, stability: 10, pressure: -5, mindset: 5 },
+        unlocks: ["稳定节奏"],
+        recommended: true
+      },
+      {
+        id: "help_friend",
+        label: "帮助朋友",
+        quote: "我也可以把懂的题讲给别人。",
+        consequence: "你给朋友讲题时，发现自己也把思路重新走了一遍。被需要的感觉，让这段复习不再只剩下个人排名。",
+        effects: { support: 8, growth: 8, strategy: 4, stamina: -4 },
+        unlocks: ["互相照亮"],
+        recommended: false
+      }
+    ]
+  },
+  {
+    id: "act_07_low_point",
+    act: 7,
+    title: "考前低谷，学会稳定",
+    subtitle: "最后二十天，最难的不是继续用力，而是别把自己用坏。",
+    days_left: 20,
+    status_text: "焦虑",
+    background_key: "scene_rainy_low_classroom",
+    character_keys: ["protagonist_exhausted_uniform", "teacher_classroom"],
+    real_text: ["距离高考还有20天", "模拟测试"],
+    ui_text: ["事件触发：考前低谷", "焦虑 +20", "体力 -15", "请选择最后阶段策略"],
+    narration:
+      "雨水顺着窗玻璃往下滑。模拟测试的红叉散在卷面上，你盯着它们太久，连太阳穴都开始发胀。",
+    dialogue: [
+      { speaker: "teacher", text: "你最近是不是太紧了？" },
+      { speaker: "protagonist", text: "我怕最后掉下来。" },
+      { speaker: "teacher", text: "最后这段时间，不是把自己逼到极限，而是把已经会的东西稳稳拿住。" },
+      { speaker: "teacher", text: "最后二十天，你想继续冲，还是先把自己稳住？" }
+    ],
+    choice_prompt: "请选择最后阶段策略",
+    choice_mode: "single",
+    next_scene_id: "act_08_exam_day",
+    choices: [
+      {
+        id: "late_sprint",
+        label: "继续熬夜冲刺",
+        quote: "我还想再多刷一点。",
+        consequence: "你把夜晚也塞进复习里。题量增加了，可第二天的脑子像蒙了一层潮湿的纸。",
+        effects: { strategy: 4, stamina: -15, pressure: 12, stability: -6 },
+        unlocks: ["最后硬冲"],
+        recommended: false
+      },
+      {
+        id: "adjust_sleep",
+        label: "调整作息",
+        quote: "我先把状态稳住。",
+        consequence: "你开始按时关灯，把最容易错的题留到清醒时处理。放慢一点以后，手反而稳了。",
+        effects: { stamina: 12, stability: 12, pressure: -10, mindset: 6 },
+        unlocks: ["稳定作息"],
+        recommended: true
+      },
+      {
+        id: "focus_key_points",
+        label: "只抓重点",
+        quote: "我只复习最容易丢分的地方。",
+        consequence: "你不再试图覆盖所有可能，而是把最后的力气放到最常丢分的地方。焦虑还在，但范围变小了。",
+        effects: { strategy: 10, stability: 7, pressure: -5, confidence: 3 },
+        unlocks: ["重点清单"],
+        recommended: false
+      }
+    ]
+  },
+  {
+    id: "act_08_exam_day",
+    act: 8,
+    title: "高考当天，最终关卡",
+    subtitle: "真正入场时，所有准备都会变成一次深呼吸。",
+    days_left: 0,
+    status_text: "可以上场",
+    background_key: "scene_exam_gate",
+    character_keys: ["protagonist_exam_uniform", "mother_exam_gate", "father_exam_gate"],
+    real_text: ["高考加油", "考场入口", "准考证"],
+    ui_text: ["最终关卡：高考", "已装备：错题复盘、稳定作息、家庭支持", "当前状态：可以上场", "请选择入场方式"],
+    narration:
+      "考点门口的人群很安静。透明文具袋贴着掌心，里面的准考证、身份证、铅笔和橡皮，都被你检查过不止一遍。",
+    dialogue: [
+      { speaker: "mother", text: "别想太多，正常考。" },
+      { speaker: "father", text: "考完回来吃饭。" },
+      { speaker: "protagonist", text: "嗯，我进去了。" },
+      { speaker: "narrator", text: "你看了一眼考场入口。那不是终点的门，更像是这一百天终于交到你手里的门把。" }
+    ],
+    choice_prompt: "请选择入场方式",
+    choice_mode: "single",
+    next_scene_id: "act_09_admission",
+    choices: [
+      {
+        id: "last_book",
+        label: "最后翻书",
+        quote: "再看一眼，说不定能碰到。",
+        consequence: "你又扫了几页笔记。它带来一点安全感，也让心跳快了一点。你最终还是把书合上，走进人群。",
+        effects: { strategy: 2, pressure: 5, stability: -3 },
+        unlocks: ["最后一眼"],
+        recommended: false
+      },
+      {
+        id: "breathe_enter",
+        label: "深呼吸入场",
+        quote: "按平时的节奏来。",
+        consequence: "你没有再往脑子里塞新的东西。吸气，呼气，抬头。你带着平时训练出的节奏走向考场。",
+        effects: { stability: 8, pressure: -7, confidence: 6, mindset: 4 },
+        unlocks: ["平时节奏"],
+        recommended: true
+      },
+      {
+        id: "check_items",
+        label: "检查装备",
+        quote: "准考证、身份证、文具，确认完毕。",
+        consequence: "你把透明文具袋重新确认了一遍。每一样东西都在，像这一百天里被你一点点放回原位的自己。",
+        effects: { stability: 7, pressure: -4, strategy: 3 },
+        unlocks: ["装备确认"],
+        recommended: false
+      }
+    ]
+  },
+  {
+    id: "act_09_admission",
+    act: 9,
+    title: "录取通知书，下一站开启",
+    subtitle: "高三留下的不只是分数，还有你终于确认过的自己。",
+    days_left: 0,
+    status_text: "下一站",
+    background_key: "scene_admission_summer_room",
+    character_keys: ["protagonist_summer_casual", "courier_summer"],
+    real_text: ["录取通知书", "我想认真走完这一百天"],
+    ui_text: ["高三副本完成", "分数已保存", "努力已保存", "勇气已保存", "友情已保存", "成长已保存", "下一站已开启"],
+    narration:
+      "夏天午后的阳光落在书桌上。错题本、计划表、透明文具袋和那张百日誓师时写下的纸条，都还安静地放在那里。",
+    dialogue: [
+      { speaker: "courier", text: "你的录取通知书到了。" },
+      { speaker: "protagonist", text: "谢谢。" },
+      { speaker: "protagonist", text: "原来高三留下的不只是分数。" },
+      { speaker: "protagonist", text: "下一站，我会继续往前走。" }
+    ],
+    choice_prompt: "依次点亮你想保存的东西",
+    choice_mode: "collect_all",
+    choices: [
+      {
+        id: "save_effort",
+        label: "保存努力",
+        quote: "我知道自己认真奔跑过。",
+        consequence: "那些清晨、晚自习和深夜台灯下的坚持，被轻轻收进心里。你不需要把它们夸大，它们已经足够真实。",
+        effects: { confidence: 4, growth: 4 },
+        unlocks: ["努力已保存"],
+        recommended: true
+      },
+      {
+        id: "save_courage",
+        label: "保存勇气",
+        quote: "我害怕过，但没有停下。",
+        consequence: "你记得自己低谷时的害怕，也记得害怕之后还是把笔拿了起来。勇气不是不抖，是抖着也往前。",
+        effects: { mindset: 4, growth: 4 },
+        unlocks: ["勇气已保存"],
+        recommended: true
+      },
+      {
+        id: "save_growth",
+        label: "保存成长",
+        quote: "我不是满分，但我已经变得更好。",
+        consequence: "你终于允许这段路不是满分作文。它有涂改、有空行、有突然明白的句子，也有你亲手写下的下一页。",
+        effects: { growth: 6, pressure: -4 },
+        unlocks: ["成长已保存"],
+        recommended: true
+      }
+    ]
   }
 ];
 
-export const player_actions: PlayerAction[] = [
+export const asset_requirements: AssetRequirement[] = [
   {
-    id: "listen_and_mark",
-    label: "跟住课堂，标出听不懂的地方",
-    description: "收益不夸张，但能把白天从混乱里拉回来。",
-    periods: ["daytime"],
-    scene: "classroom",
-    effects: { stats: { score: 3, energy: -8 }, hidden: { focus: 4, pressure: -1 } },
-    narration: "你没有逼自己当场全懂，只是在课本边缘画下小小的问号。它们像一排路标，提醒你还可以回头。",
-    tags: ["study"]
+    key: "scene_oath_playground",
+    type: "scene",
+    name: "百日誓师操场",
+    description:
+      "16:9 写实青春校园电影感，清晨操场，温暖阳光，中国高中生穿蓝白运动校服宣誓；红色横幅写“百日誓师大会”，倒计时牌写“距离高考还有100天”。",
+    used_in_scene_ids: ["act_01_oath"]
   },
   {
-    id: "ask_teacher",
-    label: "课后找老师问一道卡住的题",
-    description: "会有一点尴尬，但常常比独自耗一小时更有效。",
-    periods: ["daytime", "evening"],
-    scene: "office",
-    effects: { stats: { score: 4, energy: -10, relations: 2 }, hidden: { focus: 5, pressure: -4 } },
-    narration: "你站在办公室门口犹豫了几秒。老师接过卷子时没有评价你，只是把题目拆成了你终于能看见的几步。",
-    tags: ["study", "reflection"]
+    key: "scene_mock_score_classroom",
+    type: "scene",
+    name: "一模成绩公布教室",
+    description:
+      "16:9 写实高三教室，黑板角落写“一模成绩”，老师发成绩单，学生有人开心有人沉默，氛围压抑但不绝望。",
+    used_in_scene_ids: ["act_02_mock_failure"]
   },
   {
-    id: "run_track",
-    label: "去操场慢跑三圈",
-    description: "牺牲一点学习时间，换回身体和呼吸。",
-    periods: ["daytime", "evening"],
-    scene: "track",
-    effects: { stats: { energy: 8, mindset: 6, health: 7, score: -1 }, hidden: { pressure: -6, resilience: 2 } },
-    narration: "风从校服袖口灌进去。你跑得不快，却久违地听见自己的心跳不是因为紧张，而是因为还活着。",
-    tags: ["rest", "exercise"]
+    key: "scene_review_classroom",
+    type: "scene",
+    name: "课后错题复盘教室",
+    description:
+      "16:9 暖色教室灯光，讲台留有试卷，桌面摊开一模试卷和错题本；错题本文字包含“审题错误”“基础漏洞”“时间不够”“计算失误”，计划表标题“最后一百天复习计划”。",
+    used_in_scene_ids: ["act_03_review_unlock"]
   },
   {
-    id: "math_set",
-    label: "限时刷一组数学选择填空",
-    description: "短期提分明显，但很吃状态。",
-    periods: ["daytime", "evening"],
-    scene: "classroom",
-    effects: { stats: { score: 5, energy: -14, mindset: -2 }, hidden: { focus: 2, pressure: 4 } },
-    narration: "计时器亮着，你把草稿纸翻得哗哗响。做对时有一点亮光，做错时也有一点刺痛。",
-    tags: ["study"]
+    key: "scene_after_evening_school",
+    type: "scene",
+    name: "晚自习结束后的教学楼",
+    description:
+      "16:9 晚自习结束后的校园，教学楼灯光仍亮，黑板或门口可见“晚自习结束”，夜风、树影、学生结伴离开，温暖但有选择压力。",
+    used_in_scene_ids: ["act_04_friend_boundary"]
   },
   {
-    id: "mistake_book",
-    label: "整理错题，写下真正错因",
-    description: "没有刷题爽，但后劲更稳。",
-    periods: ["evening", "night"],
-    scene: "classroom",
-    effects: { stats: { score: 4, energy: -9, mindset: 1 }, hidden: { focus: 5, pressure: -2, resilience: 2 } },
-    narration: "你把“粗心”划掉，改成“条件没有转化”。那一笔很轻，却像把锅从自己身上搬回了题目本身。",
-    tags: ["study", "reflection"]
+    key: "scene_family_table",
+    type: "scene",
+    name: "夜晚家庭餐桌",
+    description:
+      "16:9 写实家庭生活电影感，夜晚温暖餐桌，书包放在椅子旁；桌上计划表写“本周复习计划”“错题分类”“睡眠时间”，父母和主角克制沟通。",
+    used_in_scene_ids: ["act_05_family_talk"]
   },
   {
-    id: "nap",
-    label: "趴在桌上睡二十分钟",
-    description: "很普通的休息，有时候普通正是稀缺。",
-    periods: ["daytime"],
-    scene: "classroom",
-    effects: { stats: { energy: 14, mindset: 3, health: 2 }, hidden: { pressure: -2, focus: 2 } },
-    narration: "你醒来时脸上有校服袖子的压痕。黑板还在，卷子还在，但脑子里那团雾淡了一点。",
-    tags: ["rest"]
+    key: "scene_second_mock_classroom",
+    type: "scene",
+    name: "二模成绩公布教室",
+    description:
+      "16:9 阳光照进高三教室，黑板写“二模成绩”，桌上错题本封面写“错题复盘”，氛围克制励志。",
+    used_in_scene_ids: ["act_06_progress"]
   },
   {
-    id: "friend_talk",
-    label: "和朋友去食堂慢慢吃饭",
-    description: "不一定解决问题，但会让你记得自己不是孤岛。",
-    periods: ["daytime", "evening"],
-    scene: "canteen",
-    effects: { stats: { relations: 7, mindset: 5, energy: -4, score: -1 }, hidden: { pressure: -5, resilience: 2 } },
-    narration: "你们聊了题，也聊了食堂今天过咸的汤。笑声很小，却刚好够撑过下一节课。",
-    tags: ["social", "rest"]
+    key: "scene_rainy_low_classroom",
+    type: "scene",
+    name: "雨天考前低谷教室",
+    description:
+      "16:9 阴雨天高三教室，窗外雨水滑落，冷色灯光，墙上倒计时牌写“距离高考还有20天”，试卷上写“模拟测试”并有红叉。",
+    used_in_scene_ids: ["act_07_low_point"]
   },
   {
-    id: "phone_scroll",
-    label: "刷一会儿手机，把脑子关掉",
-    description: "立刻轻松一点，也更难停下来一点。",
-    periods: ["daytime", "night"],
-    scene: "bedroom",
-    effects: { stats: { energy: 4, mindset: 5, score: -2 }, hidden: { phone_dependency: 7, focus: -6, pressure: 2 } },
-    narration: "屏幕滑过很多人的生活。你短暂地不用面对自己的，但放下手机时，时间像被谁悄悄抽走了一截。",
-    tags: ["phone", "rest"]
+    key: "scene_exam_gate",
+    type: "scene",
+    name: "高考考点入口",
+    description:
+      "16:9 高考当天早晨考点校门口，家长在警戒线外，横幅写“高考加油”，指示牌写“考场入口”，氛围安静紧张但温暖。",
+    used_in_scene_ids: ["act_08_exam_day"]
   },
   {
-    id: "parent_chat",
-    label: "和父母认真聊十分钟",
-    description: "可能温暖，也可能笨拙，但关系需要被练习。",
-    periods: ["night"],
-    scene: "home",
-    effects: { stats: { family: 6, mindset: 3, energy: -3 }, hidden: { pressure: -4, resilience: 1 } },
-    narration: "你没有把话说得很漂亮，只是说最近有点累。沉默停了一会儿，最后没有变成争吵。",
-    tags: ["family", "reflection"]
+    key: "scene_admission_summer_room",
+    type: "scene",
+    name: "夏日房间与录取通知书",
+    description:
+      "16:9 夏天午后明亮房间，桌上有录取通知书、错题本、计划表、透明文具袋、纸条“我想认真走完这一百天”，温暖成长感。",
+    used_in_scene_ids: ["act_09_admission"]
   },
   {
-    id: "early_sleep",
-    label: "提前睡觉，明天再战",
-    description: "放弃今晚的加成，保护明天的自己。",
-    periods: ["night"],
-    scene: "bedroom",
-    effects: { stats: { energy: 18, health: 8, mindset: 4, score: -1 }, hidden: { pressure: -6, focus: 3 } },
-    narration: "你关灯时还有几道题没做。黑暗没有责怪你，只是把房间轻轻盖住。",
-    tags: ["rest"]
+    key: "protagonist_uniform_bag",
+    type: "character",
+    name: "主角：百日誓师校服背包",
+    description:
+      "17岁中国高三男生，黑色短发，身形偏瘦，蓝白色高中运动校服外套，白色T恤，深蓝校服长裤，白色运动鞋，背黑色双肩包，眼神迷茫紧张。",
+    used_in_scene_ids: ["act_01_oath"]
   },
   {
-    id: "late_drill",
-    label: "熬夜再刷一套卷",
-    description: "今晚会有数字上的进步，明天会来收账。",
-    periods: ["night"],
-    scene: "bedroom",
-    effects: { stats: { score: 6, energy: -22, health: -8, mindset: -5 }, hidden: { pressure: 8, focus: -3 } },
-    narration: "台灯把卷面照得很白。你把困意按下去，也把身体的提醒一起按了下去。",
-    tags: ["study", "late"]
+    key: "protagonist_tired_uniform",
+    type: "character",
+    name: "主角：一模失利疲惫状态",
+    description:
+      "同一名男生，蓝白校服外套半敞，白色T恤，深蓝校服裤，白色运动鞋，头发略乱，眼神疲惫失落但没有崩溃。",
+    used_in_scene_ids: ["act_02_mock_failure"]
   },
   {
-    id: "quiet_journal",
-    label: "写三行日记，承认今天的感受",
-    description: "不会直接提分，但会让心里那根线松一点。",
-    periods: ["night"],
-    scene: "bedroom",
-    effects: { stats: { mindset: 7, energy: -2 }, hidden: { pressure: -7, resilience: 4, focus: 1 } },
-    narration: "你写下“今天也有点难”。这句话没有让难消失，但它终于不用在心里反复撞墙。",
-    tags: ["reflection", "rest"]
+    key: "protagonist_review_uniform",
+    type: "character",
+    name: "主角：错题复盘状态",
+    description:
+      "同一名男生，蓝白校服外套半敞，袖口微卷，白色T恤，深蓝校服裤，坐在座位上用彩色笔整理错题，神情认真。",
+    used_in_scene_ids: ["act_03_review_unlock"]
   },
   {
-    id: "recite_english",
-    label: "背一组英语高频词",
-    description: "小而确定的进步，适合碎片时间。",
-    periods: ["daytime", "night"],
-    scene: "classroom",
-    effects: { stats: { score: 2, energy: -5 }, hidden: { focus: 2 } },
-    narration: "你把单词念得很轻，像给未来某篇阅读埋下一粒小小的钉子。",
-    tags: ["study"]
+    key: "protagonist_bag_notebook",
+    type: "character",
+    name: "主角：晚自习后拿错题本",
+    description:
+      "同一名男生，蓝白校服外套，黑色双肩包，手里拿错题本，晚自习后略疲惫但温和犹豫。",
+    used_in_scene_ids: ["act_04_friend_boundary"]
   },
   {
-    id: "make_plan",
-    label: "给明天排一个现实一点的计划",
-    description: "不是把一天塞满，而是给自己留出能做到的路。",
-    periods: ["night"],
-    scene: "bedroom",
-    effects: { stats: { mindset: 4, energy: -3 }, hidden: { focus: 5, pressure: -3 } },
-    narration: "你删掉了两个过于漂亮的目标。留下来的计划不宏大，但像一双合脚的鞋。",
-    tags: ["reflection"]
-  }
-];
-
-export const story_events: StoryEvent[] = [
-  {
-    id: "friend_breakdown",
-    title: "朋友把草稿纸揉成一团",
-    body: "晚自习下课后，朋友低声问你能不能陪他走一会儿。他说自己好像怎么学都没有用。",
-    scene: "track",
-    trigger: { min_day: 3, max_stats: { relations: 80 } },
-    choices: [
-      {
-        id: "walk",
-        label: "陪他绕操场走一圈",
-        effects: { stats: { relations: 9, mindset: 3, energy: -6, score: -1 }, hidden: { resilience: 3, pressure: -2 } },
-        after_text: "你们没有说出什么大道理。只是走到第三圈时，他终于把那口气慢慢吐出来。你也一样。"
-      },
-      {
-        id: "brief",
-        label: "简单安慰后回去订正",
-        effects: { stats: { score: 2, relations: -2, energy: -3 }, hidden: { focus: 2 } },
-        after_text: "他点点头说没事。你回到座位时题目做得很快，只是某个瞬间会想起他那个点头。"
-      },
-      {
-        id: "ignore",
-        label: "假装没听见",
-        effects: { stats: { relations: -7, mindset: -3 }, hidden: { pressure: 2 } },
-        after_text: "你低头收拾书包。那句话像粉笔灰一样落在身后，轻，却没有完全散掉。"
-      }
-    ]
+    key: "protagonist_white_tshirt_home",
+    type: "character",
+    name: "主角：回家白T恤",
+    description:
+      "同一名男生，回家后脱下校服外套，穿白色T恤和深蓝校服裤，书包放椅子旁，拿出复习计划表。",
+    used_in_scene_ids: ["act_05_family_talk"]
   },
   {
-    id: "parent_target",
-    title: "餐桌上的目标大学",
-    body: "父母忽然提起一个更高的目标。他们说是为你好，语气却像把饭桌也变成了讲台。",
-    scene: "home",
-    trigger: { min_day: 4, max_stats: { family: 70 } },
-    choices: [
-      {
-        id: "explain",
-        label: "说出自己的真实想法",
-        effects: { stats: { family: 5, mindset: 4, energy: -5 }, hidden: { pressure: -5, resilience: 2 } },
-        after_text: "你的声音有点发抖，但没有退回沉默里。父母未必完全懂，却第一次听见你把目标说成自己的。"
-      },
-      {
-        id: "accept",
-        label: "点头答应，先不争",
-        effects: { stats: { family: 2, mindset: -4 }, hidden: { pressure: 7 } },
-        after_text: "饭桌恢复安静。你夹起一筷子菜，忽然分不清自己吞下去的是晚饭还是压力。"
-      },
-      {
-        id: "argue",
-        label: "直接顶回去",
-        effects: { stats: { family: -8, mindset: -3, energy: -4 }, hidden: { pressure: 4 } },
-        after_text: "话出口之后谁都没赢。你回房间关门时，门板的声音比你想象中更重。"
-      }
-    ]
+    key: "protagonist_clear_uniform",
+    type: "character",
+    name: "主角：阶段性进步清爽状态",
+    description:
+      "同一名男生，蓝白校服外套、白色T恤、深蓝校服裤，状态比之前清爽，看到成绩进步后安静微笑。",
+    used_in_scene_ids: ["act_06_progress"]
   },
   {
-    id: "teacher_notice",
-    title: "班主任在走廊叫住你",
-    body: "他说你最近上课总盯着同一页书，不像是在看题，更像是在撑着。",
-    scene: "office",
-    trigger: { min_day: 5, max_stats: { energy: 45 } },
-    choices: [
-      {
-        id: "admit",
-        label: "承认最近有点撑不住",
-        effects: { stats: { mindset: 5, relations: 3 }, hidden: { pressure: -6, resilience: 3 } },
-        after_text: "他说先把睡眠补回来，题不会因为你休息一晚就跑掉。你有点想笑，也有点想哭。"
-      },
-      {
-        id: "deny",
-        label: "说自己没事",
-        effects: { stats: { energy: -2, mindset: -3 }, hidden: { pressure: 4 } },
-        after_text: "你说得很熟练，像很多次对别人和自己说过一样。老师没有拆穿，只是让你别太晚睡。"
-      }
-    ]
+    key: "protagonist_exhausted_uniform",
+    type: "character",
+    name: "主角：考前低谷疲惫状态",
+    description:
+      "同一名男生，蓝白校服外套略皱，白色T恤，深蓝校服裤，眼神疲惫，有轻微黑眼圈，看着模拟测试卷。",
+    used_in_scene_ids: ["act_07_low_point"]
   },
   {
-    id: "rank_jump",
-    title: "排行榜旁边的人群",
-    body: "有人进步很快，名字贴在你前面。你听见同学小声讨论，心里某个地方紧了一下。",
-    scene: "classroom",
-    trigger: { min_day: 6 },
-    choices: [
-      {
-        id: "analyze",
-        label: "回座位分析自己的失分点",
-        effects: { stats: { score: 3, mindset: 1, energy: -5 }, hidden: { focus: 4, pressure: -2 } },
-        after_text: "你把视线从排名移回卷子。名字会变，错因更诚实。"
-      },
-      {
-        id: "compare",
-        label: "反复看排名",
-        effects: { stats: { mindset: -5, energy: -3 }, hidden: { pressure: 7, focus: -2 } },
-        after_text: "你看了很久，数字没有再变。变的是你接下来一整节课的呼吸。"
-      },
-      {
-        id: "ask_method",
-        label: "去问对方最近怎么学的",
-        effects: { stats: { relations: 4, score: 2, energy: -4 }, hidden: { focus: 3, pressure: -1 } },
-        after_text: "对方也有点不好意思，但还是把方法讲给你听。原来进步不是魔法，是很多笨办法终于叠起来了。"
-      }
-    ]
+    key: "protagonist_exam_uniform",
+    type: "character",
+    name: "主角：高考入场",
+    description:
+      "同一名男生，整洁蓝白校服外套，白色T恤，深蓝校服裤，白色运动鞋，手拿透明文具袋，内有准考证、身份证、2B铅笔、橡皮、黑色签字笔。",
+    used_in_scene_ids: ["act_08_exam_day"]
   },
   {
-    id: "late_insomnia",
-    title: "凌晨一点，天花板很亮",
-    body: "你明明很困，却睡不着。白天没做完的题、没说出口的话，都在黑暗里排队。",
-    scene: "bedroom",
-    trigger: { min_day: 7, min_hidden: { pressure: 62 } },
-    choices: [
-      {
-        id: "breathe",
-        label: "放下手机，慢慢数呼吸",
-        effects: { stats: { energy: 6, mindset: 4, health: 2 }, hidden: { pressure: -6, phone_dependency: -2 } },
-        after_text: "你没有立刻睡着，但心跳一点点慢下来。夜晚终于不再像一张追着你跑的卷子。"
-      },
-      {
-        id: "phone",
-        label: "拿起手机转移注意力",
-        effects: { stats: { mindset: 3, energy: -7, health: -3 }, hidden: { phone_dependency: 8, focus: -5 } },
-        after_text: "屏幕很亮，亮到你看不见窗外。等你放下它，睡意已经走远了一截。"
-      },
-      {
-        id: "study",
-        label: "干脆起来背书",
-        effects: { stats: { score: 2, energy: -10, health: -4 }, hidden: { pressure: 3 } },
-        after_text: "你把书翻开，像是在和失眠谈判。它让出一点时间，也拿走一点明天。"
-      }
-    ]
+    key: "protagonist_summer_casual",
+    type: "character",
+    name: "主角：高三结束夏日便装",
+    description:
+      "同一名男生，不穿校服，白色T恤、浅色休闲裤、白色运动鞋，状态更轻松，打开录取通知书时安静微笑。",
+    used_in_scene_ids: ["act_09_admission"]
   },
   {
-    id: "small_kindness",
-    title: "同桌递来一颗薄荷糖",
-    body: "你揉眼睛的时候，同桌把糖推到你桌角，说：别皱眉了，卷子又不会被你吓跑。",
-    scene: "classroom",
-    trigger: { min_day: 8 },
-    choices: [
-      {
-        id: "smile",
-        label: "笑一下，收下这点好意",
-        effects: { stats: { relations: 4, mindset: 4 }, hidden: { pressure: -3 } },
-        after_text: "糖很凉。你忽然发现，有些支撑不是轰轰烈烈来的，只是被轻轻放在桌角。"
-      },
-      {
-        id: "wave",
-        label: "摆摆手，继续做题",
-        effects: { stats: { score: 1, relations: -1 }, hidden: { focus: 1 } },
-        after_text: "你没有抬头。题目做完后，那颗糖还在边上，像一个被错过的小课间。"
-      }
-    ]
+    key: "teacher_classroom",
+    type: "character",
+    name: "班主任：教室/办公室",
+    description:
+      "中国高中班主任，温和坚定，真实校园教师气质，可站在讲台或学生桌边，表达克制不煽情。",
+    used_in_scene_ids: ["act_02_mock_failure", "act_03_review_unlock", "act_06_progress", "act_07_low_point"]
   },
   {
-    id: "phone_pull",
-    title: "短视频停不下来",
-    body: "你只是想看五分钟。再抬头时，台灯旁边的影子已经换了位置。",
-    scene: "bedroom",
-    trigger: { min_day: 8, min_hidden: { phone_dependency: 60 } },
-    choices: [
-      {
-        id: "delete_shortcut",
-        label: "把应用移出首页",
-        effects: { stats: { mindset: 2 }, hidden: { phone_dependency: -10, focus: 5, pressure: -2 } },
-        after_text: "手指有点舍不得，但图标消失后，桌面空出一小块安静。"
-      },
-      {
-        id: "continue",
-        label: "再看最后一个",
-        effects: { stats: { energy: -8, health: -2, mindset: -2 }, hidden: { phone_dependency: 8, focus: -7, pressure: 4 } },
-        after_text: "最后一个后面还有最后一个。你知道这句话不可信，却还是点了下去。"
-      }
-    ]
+    key: "teacher_playground",
+    type: "character",
+    name: "班主任：百日誓师操场",
+    description: "同一位班主任，站在操场前方讲话，温和坚定，面向学生宣誓队伍。",
+    used_in_scene_ids: ["act_01_oath"]
   },
   {
-    id: "found_subject",
-    title: "某一科忽然开了个口",
-    body: "你发现最近的错题集中在同一种题型。它不再像一整片雾，而像一扇能推开的门。",
-    scene: "classroom",
-    trigger: { min_day: 11, min_hidden: { focus: 55 } },
-    choices: [
-      {
-        id: "breakthrough",
-        label: "连续三天盯住这个题型",
-        effects: { stats: { score: 6, energy: -8, mindset: 3 }, hidden: { focus: 3, pressure: -2 } },
-        after_text: "你没有突然变聪明，只是终于不再用一整片焦虑面对一个具体问题。"
-      },
-      {
-        id: "leave",
-        label: "先记下来，今天不处理",
-        effects: { stats: { mindset: 1 }, hidden: { pressure: 1 } },
-        after_text: "你把它写进计划本。那扇门还在那里，等你下次真的伸手。"
-      }
-    ]
+    key: "deskmate_uniform",
+    type: "character",
+    name: "同桌",
+    description: "中国高三学生，蓝白运动校服，关心主角，一模后小声询问，表情克制。",
+    used_in_scene_ids: ["act_02_mock_failure"]
   },
   {
-    id: "rainy_evening",
-    title: "晚自习外面下雨",
-    body: "窗户上有细细的水痕。教室里只有翻书声，像一艘在雨里慢慢前进的船。",
-    scene: "classroom",
-    trigger: { min_day: 12 },
-    choices: [
-      {
-        id: "quiet_study",
-        label: "借着雨声安静做题",
-        effects: { stats: { score: 3, energy: -5 }, hidden: { focus: 4, pressure: -1 } },
-        after_text: "雨声把世界隔远了一点。你难得没有被别人的进度拖着跑。"
-      },
-      {
-        id: "look_out",
-        label: "看一会儿窗外",
-        effects: { stats: { mindset: 5, energy: 2, score: -1 }, hidden: { pressure: -4 } },
-        after_text: "你看见操场积水反着光。原来日子不只有倒计时，也有被雨洗亮的十分钟。"
-      }
-    ]
+    key: "friend_1_uniform",
+    type: "character",
+    name: "朋友1",
+    description: "中国高三学生，蓝白运动校服，性格外向温暖，邀请主角放松，二模后替主角高兴。",
+    used_in_scene_ids: ["act_04_friend_boundary", "act_06_progress"]
   },
   {
-    id: "home_silence",
-    title: "家里今晚格外安静",
-    body: "父母没有催你，也没有问排名。客厅的灯留着，像一句不太会说出口的关心。",
-    scene: "home",
-    trigger: { min_day: 14, min_stats: { family: 55 } },
-    choices: [
-      {
-        id: "sit",
-        label: "在客厅坐一会儿",
-        effects: { stats: { family: 5, mindset: 4, energy: -2 }, hidden: { pressure: -4 } },
-        after_text: "你们聊得很碎，天气、饭菜、明天要不要带伞。没有一句是答案，却都像缓冲垫。"
-      },
-      {
-        id: "room",
-        label: "直接回房间学习",
-        effects: { stats: { score: 2, family: -1, energy: -4 }, hidden: { focus: 2 } },
-        after_text: "你关上门，听见外面电视声调小了一点。那份小心你听见了，只是暂时没有回应。"
-      }
-    ]
+    key: "friend_2_uniform",
+    type: "character",
+    name: "朋友2",
+    description: "中国高三学生，蓝白运动校服，语气轻松，晚自习后附和朋友邀请主角放松。",
+    used_in_scene_ids: ["act_04_friend_boundary"]
   },
   {
-    id: "mock_whisper",
-    title: "有人说这次模拟卷很难",
-    body: "消息从前排传到后排，像一阵小风。还没考试，教室里的肩膀已经紧了起来。",
-    scene: "classroom",
-    trigger: { min_day: 18, min_hidden: { pressure: 50 } },
-    choices: [
-      {
-        id: "routine",
-        label: "按原计划复习，不追着传言跑",
-        effects: { stats: { mindset: 4 }, hidden: { focus: 4, pressure: -5 } },
-        after_text: "你把传言留在空气里，把笔落回纸上。难不难都是明天的事，今晚只处理今晚。"
-      },
-      {
-        id: "panic",
-        label: "临时加刷两套难题",
-        effects: { stats: { score: 3, energy: -13, mindset: -4, health: -3 }, hidden: { pressure: 7 } },
-        after_text: "你做得很快，也错得很快。夜里躺下时，脑子还在自动翻页。"
-      }
-    ]
+    key: "mother_home",
+    type: "character",
+    name: "母亲",
+    description: "中国母亲，夜晚餐桌和高考考点场景使用，温和关切，不夸张煽情。",
+    used_in_scene_ids: ["act_05_family_talk", "act_08_exam_day"]
   },
   {
-    id: "body_warning",
-    title: "早上起来嗓子有点疼",
-    body: "你把校服拉链拉到最上面，还是觉得身体像一台被连续使用太久的机器。",
-    scene: "bedroom",
-    trigger: { min_day: 15, max_stats: { health: 45 } },
-    choices: [
-      {
-        id: "slow",
-        label: "今天降低强度，多喝水",
-        effects: { stats: { health: 9, energy: 5, score: -2 }, hidden: { pressure: -3 } },
-        after_text: "你没有把自己逼到极限。身体像是终于被听见了一次，虽然只是很小声地回应。"
-      },
-      {
-        id: "push",
-        label: "照常冲刺",
-        effects: { stats: { score: 3, health: -8, energy: -8, mindset: -2 }, hidden: { pressure: 5 } },
-        after_text: "你把不舒服压进领口里。它没有消失，只是在下午用更沉的脑袋回来找你。"
-      }
-    ]
+    key: "father_home",
+    type: "character",
+    name: "父亲",
+    description: "中国父亲，认真但不严厉，餐桌上表达担心，高考当天以简短家常话支持主角。",
+    used_in_scene_ids: ["act_05_family_talk", "act_08_exam_day"]
   },
   {
-    id: "future_form",
-    title: "志愿意向表发下来了",
-    body: "那张纸很薄，却让未来突然有了格子。城市、专业、分数线，每一栏都像在问你：你想去哪？",
-    scene: "classroom",
-    trigger: { min_day: 22 },
-    choices: [
-      {
-        id: "self",
-        label: "认真写下自己的排序",
-        effects: { stats: { mindset: 5, family: 1 }, hidden: { focus: 3, pressure: -3 } },
-        after_text: "你写得很慢。不是因为不知道答案，而是第一次把答案写得像自己的。"
-      },
-      {
-        id: "parents",
-        label: "按父母期待先填",
-        effects: { stats: { family: 3, mindset: -3 }, hidden: { pressure: 5 } },
-        after_text: "表格填完了，你心里却空出一栏。那一栏没有名字，只写着“以后再说”。"
-      },
-      {
-        id: "avoid",
-        label: "先塞进书包，晚点再想",
-        effects: { stats: { mindset: -1 }, hidden: { pressure: 4 } },
-        after_text: "纸角在书包里折了一下。未来不会因为被塞起来就变轻，但今天你确实暂时不用看它。"
-      }
-    ]
-  },
-  {
-    id: "last_week",
-    title: "倒计时牌只剩个位数",
-    body: "红色数字像压低了声音。大家都比平时安静，连椅子挪动的声音都显得小心。",
-    scene: "classroom",
-    trigger: { min_day: 24 },
-    choices: [
-      {
-        id: "steady",
-        label: "只复盘基础和错题",
-        effects: { stats: { score: 3, mindset: 4, energy: -4 }, hidden: { focus: 4, pressure: -5 } },
-        after_text: "你没有再贪多。那些被你反复捡起的基础题，终于在最后几天变成脚下的地。"
-      },
-      {
-        id: "sprint",
-        label: "尽可能多刷题",
-        effects: { stats: { score: 4, energy: -14, health: -4, mindset: -4 }, hidden: { pressure: 8 } },
-        after_text: "你想把每一种可能都抓住。可手攥得太紧时，有些东西也会从指缝里漏掉。"
-      },
-      {
-        id: "breathe",
-        label: "每天留半小时散步",
-        effects: { stats: { mindset: 7, health: 4, score: -1 }, hidden: { pressure: -7, resilience: 3 } },
-        after_text: "你沿着操场边慢慢走。树影落在路上，像把一整年切成可以承受的小段。"
-      }
-    ]
+    key: "courier_summer",
+    type: "character",
+    name: "快递员",
+    description: "夏日午后送来录取通知书的快递员，真实生活感，递出写有“录取通知书”的信封。",
+    used_in_scene_ids: ["act_09_admission"]
   }
 ];

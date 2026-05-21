@@ -1,32 +1,17 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
-import { character_profiles, period_labels, scene_labels } from "./content";
-import {
-  acknowledge_exam,
-  calculate_study_efficiency,
-  choose_action,
-  create_initial_state,
-  get_available_actions,
-  get_current_event,
-  resolve_event_choice
-} from "./game_logic";
+import { asset_requirements, speaker_labels, stat_labels } from "./content";
+import { choose_visual_novel_option, create_initial_state, format_effects, get_current_scene, is_collectible_choice_selected } from "./game_logic";
 import { clear_saved_state, load_saved_state, save_state } from "./storage";
-import type { CharacterProfile, GameState, PlayerAction, Stats } from "./types";
+import type { AssetRequirement, StatKey, VisualNovelChoice, VisualNovelScene, VisualNovelState } from "./types";
 
-const stat_labels: Record<keyof Stats, string> = {
-  score: "成绩",
-  energy: "精力",
-  mindset: "心态",
-  health: "健康",
-  relations: "人际",
-  family: "家庭"
-};
+const visible_stat_keys: StatKey[] = ["mindset", "pressure", "strategy", "stability", "stamina", "support", "confidence", "growth"];
 
 /**
- * Renders the full playable single-page game.
+ * Renders the playable visual novel.
  */
 export function App(): ReactElement {
-  const [game_state, set_game_state] = useState<GameState | null>(() => load_saved_state());
-  const available_actions = useMemo(() => (game_state ? get_available_actions(game_state) : []), [game_state]);
+  const [game_state, set_game_state] = useState<VisualNovelState | null>(() => load_saved_state());
+  const current_scene = useMemo(() => (game_state ? get_current_scene(game_state) : null), [game_state]);
 
   useEffect(() => {
     if (game_state) {
@@ -35,370 +20,315 @@ export function App(): ReactElement {
   }, [game_state]);
 
   /**
-   * Starts a new run from a character profile.
+   * Starts a fresh visual novel run.
    */
-  function start_new_game(character_id: string): void {
-    const initial_state = create_initial_state(character_id);
-    set_game_state(initial_state);
+  function start_new_game(): void {
+    set_game_state(create_initial_state());
   }
 
   /**
-   * Clears the save and returns to the start screen.
+   * Clears the active local save and returns to the title screen.
    */
   function restart_game(): void {
     clear_saved_state();
     set_game_state(null);
   }
 
-  if (!game_state) {
-    return <StartScreen on_start={start_new_game} saved_state={load_saved_state()} />;
+  if (!game_state || !current_scene) {
+    return <TitleScreen has_saved_state={load_saved_state() !== null} on_start={start_new_game} on_continue={(saved_state) => set_game_state(saved_state)} />;
   }
 
-  if (game_state.phase === "ending" && game_state.final_ending) {
+  if (game_state.ending) {
     return <EndingScreen game_state={game_state} on_restart={restart_game} />;
   }
 
   return (
-    <main className="game-shell">
-      <HeaderBar game_state={game_state} on_restart={restart_game} />
-      <section className="game-grid">
-        <aside className="status-panel">
-          <StatusBars stats={game_state.stats} />
-          <HiddenHints game_state={game_state} />
+    <main className="vn-shell">
+      <TopBar game_state={game_state} scene={current_scene} on_restart={restart_game} />
+      <section className="vn-layout">
+        <VisualStage scene={current_scene} />
+        <aside className="side-panel">
+          <StatusPanel game_state={game_state} />
+          <InventoryPanel unlocked_items={game_state.unlocked_items} />
         </aside>
-        <section className="stage-panel">
-          <PixelScene scene_id={game_state.current_scene} />
-          <DialogueBox text={game_state.message} />
-        </section>
-        <aside className="choice-panel">
-          {game_state.phase === "event" ? (
-            <EventPanel game_state={game_state} on_choose={(choice_id) => set_game_state(resolve_event_choice(game_state, choice_id))} />
-          ) : null}
-          {game_state.phase === "exam" && game_state.current_exam ? (
-            <ExamPanel game_state={game_state} on_continue={() => set_game_state(acknowledge_exam(game_state))} />
-          ) : null}
-          {game_state.phase === "playing" ? (
-            <ActionPanel
-              actions={available_actions}
-              game_state={game_state}
-              on_choose={(action_id) => set_game_state(choose_action(game_state, action_id))}
-            />
-          ) : null}
-        </aside>
+      </section>
+      <section className="story-panel">
+        <DialoguePanel scene={current_scene} />
+        <ChoicePanel game_state={game_state} scene={current_scene} on_choose={(choice_id) => set_game_state(choose_visual_novel_option(game_state, choice_id))} />
       </section>
     </main>
   );
 }
 
-interface StartScreenProps {
-  saved_state: GameState | null;
-  on_start: (character_id: string) => void;
+interface TitleScreenProps {
+  has_saved_state: boolean;
+  on_start: () => void;
+  on_continue: (saved_state: VisualNovelState) => void;
 }
 
 /**
- * Renders the character selection and continue entry.
+ * Renders the title and save controls.
  */
-function StartScreen({ saved_state, on_start }: StartScreenProps): ReactElement {
-  const [selected_character_id, set_selected_character_id] = useState<string>(character_profiles[0].id);
-  const selected_profile = character_profiles.find((profile) => profile.id === selected_character_id) ?? character_profiles[0];
+function TitleScreen({ has_saved_state, on_start, on_continue }: TitleScreenProps): ReactElement {
+  /**
+   * Loads a save when the player chooses to continue.
+   */
+  function continue_saved_game(): void {
+    const saved_state = load_saved_state();
+
+    if (saved_state) {
+      on_continue(saved_state);
+    }
+  }
 
   return (
-    <main className="start-screen">
-      <section className="title-block">
-        <p className="kicker">像素风高三生活模拟</p>
-        <h1>一模前30天</h1>
-        <p className="subtitle">你不是在选择一天怎么过，而是在选择自己会变成什么样的人。</p>
-      </section>
-      <section className="profile-layout">
-        <div className="profile-list" aria-label="角色类型">
-          {character_profiles.map((profile) => (
-            <button
-              className={profile.id === selected_character_id ? "profile-card active" : "profile-card"}
-              key={profile.id}
-              onClick={() => set_selected_character_id(profile.id)}
-              type="button"
-            >
-              <strong>{profile.name}</strong>
-              <span>{profile.summary}</span>
-            </button>
-          ))}
-        </div>
-        <div className="profile-preview">
-          <PixelPortrait profile={selected_profile} />
-          <p>{selected_profile.opening}</p>
-          <button className="primary-button" onClick={() => on_start(selected_character_id)} type="button">
-            开始倒计时
+    <main className="title-screen">
+      <section className="title-copy">
+        <p className="eyebrow">视觉小说改版</p>
+        <h1>倒计时100天</h1>
+        <p>从百日誓师到录取通知书。不是把高三写成一场胜利，而是写成一个人慢慢学会选择、承受和继续往前走。</p>
+        <div className="title-actions">
+          <button className="primary-button" onClick={on_start} type="button">
+            开始游戏
           </button>
-          {saved_state ? <p className="save-note">检测到本地存档，继续游戏会在主界面自动保留当前进度。</p> : null}
+          {has_saved_state ? (
+            <button className="secondary-button" onClick={continue_saved_game} type="button">
+              继续存档
+            </button>
+          ) : null}
         </div>
+      </section>
+      <section className="asset-preview-card">
+        <p className="panel-title">资源接入状态</p>
+        <p>当前版本先使用剧情占位画面。后续把你提供的场景图和人物图按清单放入项目后，即可替换占位层。</p>
       </section>
     </main>
   );
 }
 
-interface HeaderBarProps {
-  game_state: GameState;
+interface TopBarProps {
+  game_state: VisualNovelState;
+  scene: VisualNovelScene;
   on_restart: () => void;
 }
 
 /**
- * Renders day, scene, phase, and reset controls.
+ * Renders global visual novel progress.
  */
-function HeaderBar({ game_state, on_restart }: HeaderBarProps): ReactElement {
-  const days_left = Math.max(0, 31 - game_state.day);
-
+function TopBar({ game_state, scene, on_restart }: TopBarProps): ReactElement {
   return (
     <header className="top-bar">
       <div>
-        <span className="pixel-label">倒计时</span>
-        <strong>{days_left} 天</strong>
+        <span>第 {scene.act} 幕</span>
+        <strong>{scene.title}</strong>
       </div>
       <div>
-        <span className="pixel-label">第 {game_state.day} 天</span>
-        <strong>{scene_labels[game_state.current_scene]}</strong>
+        <span>剩余时间</span>
+        <strong>{scene.days_left} 天</strong>
       </div>
       <div>
-        <span className="pixel-label">时段</span>
-        <strong>{period_labels[game_state.current_period]}</strong>
+        <span>当前状态</span>
+        <strong>{scene.status_text}</strong>
       </div>
-      <button className="ghost-button" onClick={on_restart} type="button">
+      <div>
+        <span>已选择</span>
+        <strong>{game_state.choice_history.length}</strong>
+      </div>
+      <button className="secondary-button" onClick={on_restart} type="button">
         重新开始
       </button>
     </header>
   );
 }
 
-interface StatusBarsProps {
-  stats: Stats;
+interface VisualStageProps {
+  scene: VisualNovelScene;
 }
 
 /**
- * Renders visible player stats as pixel-style bars.
+ * Renders a cinematic placeholder for the scene image.
  */
-function StatusBars({ stats }: StatusBarsProps): ReactElement {
-  const stat_entries = Object.entries(stat_labels) as Array<[keyof Stats, string]>;
-
+function VisualStage({ scene }: VisualStageProps): ReactElement {
   return (
-    <div className="stat-stack">
-      {stat_entries.map(([stat_key, label]) => (
-        <div className="stat-row" key={stat_key}>
-          <div className="stat-heading">
-            <span>{label}</span>
-            <strong>{stats[stat_key]}</strong>
-          </div>
-          <div className="stat-track">
-            <span className={`stat-fill stat-${stat_key}`} style={{ width: `${stats[stat_key]}%` }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface HiddenHintsProps {
-  game_state: GameState;
-}
-
-/**
- * Renders qualitative hints for hidden state without exposing all numbers.
- */
-function HiddenHints({ game_state }: HiddenHintsProps): ReactElement {
-  const efficiency = Math.round(calculate_study_efficiency(game_state) * 100);
-  const pressure_text = game_state.hidden.pressure >= 70 ? "心里很紧" : game_state.hidden.pressure >= 45 ? "压力可感" : "还能呼吸";
-  const focus_text = game_state.hidden.focus >= 65 ? "专注清晰" : game_state.hidden.focus >= 42 ? "偶有分神" : "容易飘走";
-
-  return (
-    <div className="hint-box">
-      <p>
-        学习效率 <strong>{efficiency}%</strong>
-      </p>
-      <p>{pressure_text}</p>
-      <p>{focus_text}</p>
-    </div>
-  );
-}
-
-interface PixelSceneProps {
-  scene_id: string;
-}
-
-/**
- * Renders a CSS-only pixel scene for the current story location.
- */
-function PixelScene({ scene_id }: PixelSceneProps): ReactElement {
-  return (
-    <div className={`pixel-scene scene-${scene_id}`} aria-label={scene_labels[scene_id]}>
-      <div className="pixel-sun" />
-      <div className="pixel-window" />
-      <div className="pixel-board" />
-      <div className="pixel-desk desk-one" />
-      <div className="pixel-desk desk-two" />
-      <div className="pixel-person" />
-      <div className="pixel-ground" />
-    </div>
-  );
-}
-
-interface DialogueBoxProps {
-  text: string;
-}
-
-/**
- * Renders the latest narration text.
- */
-function DialogueBox({ text }: DialogueBoxProps): ReactElement {
-  return (
-    <div className="dialogue-box">
-      <p>{text}</p>
-    </div>
-  );
-}
-
-interface ActionPanelProps {
-  actions: PlayerAction[];
-  game_state: GameState;
-  on_choose: (action_id: string) => void;
-}
-
-/**
- * Renders period actions for the player to choose from.
- */
-function ActionPanel({ actions, game_state, on_choose }: ActionPanelProps): ReactElement {
-  return (
-    <div className="panel-card">
-      <p className="panel-title">{period_labels[game_state.current_period]}</p>
-      <div className="action-list">
-        {actions.map((action) => (
-          <button className="choice-button" key={action.id} onClick={() => on_choose(action.id)} type="button">
-            <strong>{action.label}</strong>
-            <span>{action.description}</span>
-          </button>
+    <section className={`visual-stage ${scene.id}`}>
+      <div className="image-placeholder">
+        <p>{scene.background_key}</p>
+        <span>等待场景图片</span>
+      </div>
+      <div className="real-text-stack" aria-label="画面内真实文字">
+        {scene.real_text.map((text) => (
+          <span key={text}>{text}</span>
         ))}
       </div>
-    </div>
+      <div className="ui-overlay-card">
+        {scene.ui_text.map((text) => (
+          <p key={text}>{text}</p>
+        ))}
+      </div>
+    </section>
   );
 }
 
-interface EventPanelProps {
-  game_state: GameState;
+interface StatusPanelProps {
+  game_state: VisualNovelState;
+}
+
+/**
+ * Renders the lightweight state values used by the visual novel.
+ */
+function StatusPanel({ game_state }: StatusPanelProps): ReactElement {
+  return (
+    <section className="info-card">
+      <p className="panel-title">状态</p>
+      <div className="stat-grid">
+        {visible_stat_keys.map((stat_key) => (
+          <div className="stat-item" key={stat_key}>
+            <div>
+              <span>{stat_labels[stat_key]}</span>
+              <strong>{game_state.stats[stat_key]}</strong>
+            </div>
+            <div className="stat-track">
+              <span className={`stat-fill stat-${stat_key}`} style={{ width: `${game_state.stats[stat_key]}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+interface InventoryPanelProps {
+  unlocked_items: string[];
+}
+
+/**
+ * Renders unlocked story equipment and memory markers.
+ */
+function InventoryPanel({ unlocked_items }: InventoryPanelProps): ReactElement {
+  return (
+    <section className="info-card">
+      <p className="panel-title">已装备 / 已保存</p>
+      <div className="tag-list">
+        {unlocked_items.length > 0 ? unlocked_items.map((item) => <span key={item}>{item}</span>) : <span>尚未解锁</span>}
+      </div>
+    </section>
+  );
+}
+
+interface DialoguePanelProps {
+  scene: VisualNovelScene;
+}
+
+/**
+ * Renders narration and dialogue lines for the scene.
+ */
+function DialoguePanel({ scene }: DialoguePanelProps): ReactElement {
+  return (
+    <section className="dialogue-panel">
+      <div>
+        <p className="panel-title">{scene.subtitle}</p>
+        <p className="narration">{scene.narration}</p>
+      </div>
+      <div className="dialogue-lines">
+        {scene.dialogue.map((line, index) => (
+          <p key={`${line.speaker}-${index}`}>
+            <strong>{speaker_labels[line.speaker]}：</strong>
+            {line.text}
+          </p>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+interface ChoicePanelProps {
+  game_state: VisualNovelState;
+  scene: VisualNovelScene;
   on_choose: (choice_id: string) => void;
 }
 
 /**
- * Renders the active story event and its choices.
+ * Renders player choices and their quoted intent.
  */
-function EventPanel({ game_state, on_choose }: EventPanelProps): ReactElement | null {
-  const current_event = get_current_event(game_state);
-
-  if (!current_event) {
-    return null;
-  }
-
+function ChoicePanel({ game_state, scene, on_choose }: ChoicePanelProps): ReactElement {
   return (
-    <div className="panel-card event-card">
-      <p className="panel-title">{current_event.title}</p>
-      <p className="event-body">{current_event.body}</p>
-      <div className="action-list">
-        {current_event.choices.map((choice) => (
-          <button className="choice-button" key={choice.id} onClick={() => on_choose(choice.id)} type="button">
-            <strong>{choice.label}</strong>
-          </button>
-        ))}
+    <section className="choice-panel">
+      <p className="panel-title">{scene.choice_prompt}</p>
+      <div className="choice-list">
+        {scene.choices.map((choice) => {
+          const is_selected = scene.choice_mode === "collect_all" && is_collectible_choice_selected(game_state, choice.id);
+          return <ChoiceButton choice={choice} is_selected={is_selected} key={choice.id} on_choose={on_choose} />;
+        })}
       </div>
-    </div>
+    </section>
   );
 }
 
-interface ExamPanelProps {
-  game_state: GameState;
-  on_continue: () => void;
+interface ChoiceButtonProps {
+  choice: VisualNovelChoice;
+  is_selected: boolean;
+  on_choose: (choice_id: string) => void;
 }
 
 /**
- * Renders the current exam result.
+ * Renders a single choice button.
  */
-function ExamPanel({ game_state, on_continue }: ExamPanelProps): ReactElement | null {
-  if (!game_state.current_exam) {
-    return null;
-  }
-
+function ChoiceButton({ choice, is_selected, on_choose }: ChoiceButtonProps): ReactElement {
   return (
-    <div className="panel-card exam-card">
-      <p className="panel-title">{game_state.current_exam.name}</p>
-      <h2>{game_state.current_exam.score}</h2>
-      <h3>{game_state.current_exam.title}</h3>
-      <p>{game_state.current_exam.feedback}</p>
-      <button className="primary-button" onClick={on_continue} type="button">
-        收起卷子
-      </button>
-    </div>
+    <button className={is_selected ? "choice-button selected" : "choice-button"} disabled={is_selected} onClick={() => on_choose(choice.id)} type="button">
+      <span className="choice-heading">
+        <strong>{choice.label}</strong>
+        {choice.recommended ? <em>推荐</em> : null}
+      </span>
+      <span className="choice-quote">“{choice.quote}”</span>
+      <span className="choice-effect">{format_effects(choice.effects)}</span>
+    </button>
   );
 }
 
 interface EndingScreenProps {
-  game_state: GameState;
+  game_state: VisualNovelState;
   on_restart: () => void;
 }
 
 /**
- * Renders the final ending and a compact choice review.
+ * Renders the final completion screen.
  */
 function EndingScreen({ game_state, on_restart }: EndingScreenProps): ReactElement {
-  const ending = game_state.final_ending;
-  const history_preview = game_state.choice_history.slice(-6);
-
-  if (!ending) {
-    return (
-      <main className="ending-screen">
-        <button className="primary-button" onClick={on_restart} type="button">
-          重新开始
-        </button>
-      </main>
-    );
-  }
+  const ending = game_state.ending;
+  const last_choices = game_state.choice_history.slice(-5);
 
   return (
     <main className="ending-screen">
       <section className="ending-card">
-        <p className="kicker">结局</p>
-        <h1>{ending.title}</h1>
-        <p className="ending-subtitle">{ending.subtitle}</p>
-        <p>{ending.review}</p>
-        <div className="exam-list">
-          {game_state.exam_records.map((record) => (
-            <span key={`${record.day}-${record.name}`}>
-              第 {record.day} 天 · {record.name} · {record.score}
-            </span>
+        <p className="eyebrow">高三副本完成</p>
+        <h1>{ending?.title ?? "下一站已开启"}</h1>
+        <p className="ending-subtitle">{ending?.subtitle}</p>
+        <p>{ending?.body}</p>
+        <div className="save-grid">
+          {(ending?.saved_items ?? []).map((item) => (
+            <span key={item}>{item}</span>
           ))}
         </div>
         <div className="history-list">
-          {history_preview.map((entry) => (
-            <p key={`${entry.day}-${entry.period}-${entry.label}`}>
-              第 {entry.day} 天：{entry.label}
-            </p>
+          {last_choices.map((choice) => (
+            <article key={`${choice.scene_id}-${choice.choice_id}`}>
+              <strong>{choice.scene_title} · {choice.label}</strong>
+              <p>{choice.consequence}</p>
+            </article>
           ))}
         </div>
         <button className="primary-button" onClick={on_restart} type="button">
-          再来一次
+          重新开始
         </button>
       </section>
     </main>
   );
 }
 
-interface PixelPortraitProps {
-  profile: CharacterProfile;
-}
-
 /**
- * Renders a small pixel portrait using the profile id as the palette hook.
+ * Exposes the image requirements for README and future integration work.
  */
-function PixelPortrait({ profile }: PixelPortraitProps): ReactElement {
-  return (
-    <div className={`pixel-portrait portrait-${profile.id}`} aria-label={profile.name}>
-      <span />
-      <span />
-      <span />
-    </div>
-  );
+export function get_asset_requirements(): AssetRequirement[] {
+  return asset_requirements;
 }

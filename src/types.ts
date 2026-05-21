@@ -1,142 +1,99 @@
-export type Period = "daytime" | "evening" | "night";
+export type SceneId =
+  | "act_01_oath"
+  | "act_02_mock_failure"
+  | "act_03_review_unlock"
+  | "act_04_friend_boundary"
+  | "act_05_family_talk"
+  | "act_06_progress"
+  | "act_07_low_point"
+  | "act_08_exam_day"
+  | "act_09_admission";
 
-export type SceneId = "classroom" | "bedroom" | "track" | "office" | "home" | "canteen";
+export type SpeakerId = "narrator" | "teacher" | "protagonist" | "deskmate" | "friend_1" | "friend_2" | "mother" | "father" | "courier";
 
-export type GamePhase = "playing" | "event" | "exam" | "ending";
+export type ChoiceMode = "single" | "collect_all";
 
-export type ActionTag =
-  | "study"
-  | "rest"
-  | "social"
-  | "family"
-  | "phone"
-  | "late"
-  | "exercise"
-  | "reflection";
+export type StatKey = "mindset" | "pressure" | "strategy" | "stability" | "stamina" | "support" | "confidence" | "growth";
 
-export type EndingId =
-  | "ideal"
-  | "stable"
-  | "comeback"
-  | "misfire"
-  | "hollow"
-  | "rediscover";
-
-export interface Stats {
-  score: number;
-  energy: number;
+export interface VisualNovelStats {
   mindset: number;
-  health: number;
-  relations: number;
-  family: number;
-}
-
-export interface HiddenStats {
-  focus: number;
   pressure: number;
-  phone_dependency: number;
-  resilience: number;
+  strategy: number;
+  stability: number;
+  stamina: number;
+  support: number;
+  confidence: number;
+  growth: number;
 }
 
-export interface Effects {
-  stats?: Partial<Stats>;
-  hidden?: Partial<HiddenStats>;
+export type StatEffects = Partial<Record<StatKey, number>>;
+
+export interface DialogueLine {
+  speaker: SpeakerId;
+  text: string;
 }
 
-export interface GameCounters {
-  late_night_days: number;
-  phone_days: number;
-  rest_days: number;
-}
-
-export interface CharacterProfile {
-  id: string;
-  name: string;
-  summary: string;
-  opening: string;
-  stats: Stats;
-  hidden: HiddenStats;
-}
-
-export interface PlayerAction {
+export interface VisualNovelChoice {
   id: string;
   label: string;
+  quote: string;
+  consequence: string;
+  effects: StatEffects;
+  unlocks: string[];
+  recommended?: boolean;
+}
+
+export interface VisualNovelScene {
+  id: SceneId;
+  act: number;
+  title: string;
+  subtitle: string;
+  days_left: number;
+  status_text: string;
+  background_key: string;
+  character_keys: string[];
+  real_text: string[];
+  ui_text: string[];
+  narration: string;
+  dialogue: DialogueLine[];
+  choice_prompt: string;
+  choice_mode: ChoiceMode;
+  next_scene_id?: SceneId;
+  choices: VisualNovelChoice[];
+}
+
+export interface ChoiceRecord {
+  scene_id: SceneId;
+  scene_title: string;
+  choice_id: string;
+  label: string;
+  quote: string;
+  consequence: string;
+  effects: StatEffects;
+  unlocked: string[];
+}
+
+export interface AssetRequirement {
+  key: string;
+  type: "scene" | "character" | "prop";
+  name: string;
   description: string;
-  periods: Period[];
-  scene: SceneId;
-  effects: Effects;
-  narration: string;
-  tags: ActionTag[];
+  used_in_scene_ids: SceneId[];
 }
 
-export interface EventTrigger {
-  min_day?: number;
-  max_day?: number;
-  min_stats?: Partial<Stats>;
-  max_stats?: Partial<Stats>;
-  min_hidden?: Partial<HiddenStats>;
-  max_hidden?: Partial<HiddenStats>;
-  required_recent_tag?: ActionTag;
-}
-
-export interface EventChoice {
-  id: string;
-  label: string;
-  effects: Effects;
-  after_text: string;
-}
-
-export interface StoryEvent {
-  id: string;
-  title: string;
-  body: string;
-  scene: SceneId;
-  trigger: EventTrigger;
-  choices: EventChoice[];
-}
-
-export interface ChoiceHistoryEntry {
-  day: number;
-  period: Period | "event" | "exam";
-  label: string;
-  narration: string;
-  tags: ActionTag[];
-}
-
-export interface ExamRecord {
-  day: number;
-  name: string;
-  score: number;
-  title: string;
-  feedback: string;
-  effects: Effects;
-}
-
-export interface EndingResult {
-  id: EndingId;
+export interface VisualNovelEnding {
   title: string;
   subtitle: string;
   body: string;
-  review: string;
+  saved_items: string[];
 }
 
-export interface GameState {
-  day: number;
-  phase: GamePhase;
-  current_period: Period;
-  selected_character_id: string;
-  initial_score: number;
-  stats: Stats;
-  hidden: HiddenStats;
-  counters: GameCounters;
-  completed_periods: Period[];
-  triggered_event_ids: string[];
-  exam_records: ExamRecord[];
-  choice_history: ChoiceHistoryEntry[];
-  recent_tags: ActionTag[];
-  current_scene: SceneId;
-  current_event_id?: string;
-  current_exam?: ExamRecord;
-  final_ending?: EndingResult;
-  message: string;
+export interface VisualNovelState {
+  save_version: 1;
+  current_scene_id: SceneId;
+  stats: VisualNovelStats;
+  unlocked_items: string[];
+  selected_collectible_choice_ids: string[];
+  choice_history: ChoiceRecord[];
+  ending?: VisualNovelEnding;
 }
