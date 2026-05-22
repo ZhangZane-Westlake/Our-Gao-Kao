@@ -106,6 +106,7 @@ interface TypewriterState {
 export function App(): ReactElement {
   const [game_state, set_game_state] = useState<VisualNovelState | null>(() => load_saved_state());
   const [overlay_state, set_overlay_state] = useState<OverlayState>(null);
+  const [should_show_choices, set_should_show_choices] = useState<boolean>(false);
   const transition_timeout_ids = useRef<number[]>([]);
   const current_scene = useMemo(() => (game_state ? get_current_scene(game_state) : null), [game_state]);
 
@@ -114,6 +115,18 @@ export function App(): ReactElement {
       save_state(game_state);
     }
   }, [game_state]);
+
+  useEffect(() => {
+    if (!current_scene) {
+      set_should_show_choices(false);
+      return;
+    }
+
+    set_should_show_choices(false);
+    const timeout_id = window.setTimeout(() => set_should_show_choices(true), estimate_scene_typewriter_duration(current_scene));
+
+    return () => window.clearTimeout(timeout_id);
+  }, [current_scene]);
 
   useEffect(() => {
     return () => {
@@ -231,9 +244,10 @@ export function App(): ReactElement {
     <main className="vn-shell">
       <TopBar scene={current_scene} on_restart={restart_game} />
       <section className="vn-layout">
-        <VisualStage game_state={game_state} is_blocked={overlay_state !== null} on_choose={handle_choose} scene={current_scene} />
+        <VisualStage scene={current_scene} />
         <aside className="side-panel">
           <StatusPanel game_state={game_state} />
+          {should_show_choices ? <ChoicePanel game_state={game_state} is_blocked={overlay_state !== null} scene={current_scene} on_choose={handle_choose} /> : null}
         </aside>
       </section>
       <TransitionOverlay on_intro_continue={enter_first_scene} overlay_state={overlay_state} />
@@ -318,16 +332,13 @@ function TopBar({ scene, on_restart }: TopBarProps): ReactElement {
 }
 
 interface VisualStageProps {
-  game_state: VisualNovelState;
-  is_blocked: boolean;
-  on_choose: (choice_id: string) => void;
   scene: VisualNovelScene;
 }
 
 /**
  * Renders a cinematic placeholder for the scene image.
  */
-function VisualStage({ game_state, is_blocked, on_choose, scene }: VisualStageProps): ReactElement {
+function VisualStage({ scene }: VisualStageProps): ReactElement {
   const [failed_scene_images, set_failed_scene_images] = useState<Set<string>>(() => new Set());
   const [failed_character_images, set_failed_character_images] = useState<Set<string>>(() => new Set());
   const scene_src = `${scene_asset_root}/${scene.background_key}.png`;
@@ -394,7 +405,6 @@ function VisualStage({ game_state, is_blocked, on_choose, scene }: VisualStagePr
       ) : null}
       <section className="story-panel">
         <DialoguePanel scene={scene} />
-        <ChoicePanel game_state={game_state} is_blocked={is_blocked} scene={scene} on_choose={on_choose} />
       </section>
     </section>
   );
@@ -551,6 +561,14 @@ function build_typewriter_start_delays(text_lines: string[], speed_ms = 44, gap_
     accumulated_delay_ms += estimate_typewriter_duration(text_line, speed_ms) + gap_ms;
     return start_delay_ms;
   });
+}
+
+/**
+ * Estimates the total typewriter time for a scene before choices appear.
+ */
+function estimate_scene_typewriter_duration(scene: VisualNovelScene): number {
+  const text_lines = [scene.narration, ...scene.dialogue.map((line) => line.text)];
+  return text_lines.reduce((duration_ms, text_line) => duration_ms + estimate_typewriter_duration(text_line) + 260, 0);
 }
 
 /**

@@ -156,8 +156,8 @@ export const visual_novel_scenes: VisualNovelScene[] = [
     dialogue: [
       { speaker: "teacher", text: "不要只问自己有没有努力，也要问努力有没有方向。" },
       { speaker: "teacher", text: "接下来，你想怎么重新安排？" },
-      { speaker: "protagonist", text: "我想先把错的原因找出来。" },
-      { speaker: "narrator", text: "错题本上的四个分类像四盏小灯。它们照不亮全部未来，但足够照见下一步。" }
+      { speaker: "protagonist", text: "……" },
+      { speaker: "narrator", text: "错题本上的空白格还等着被填上。它们照不亮全部未来，但足够把下一步的问题摊开。" }
     ],
     choice_prompt: "请选择复习路线",
     choice_mode: "single",
@@ -208,8 +208,8 @@ export const visual_novel_scenes: VisualNovelScene[] = [
     dialogue: [
       { speaker: "friend_1", text: "走啊，出去吃点东西，今晚别学了。" },
       { speaker: "friend_2", text: "就半小时，放松一下。" },
-      { speaker: "protagonist", text: "可以，但半小时后我得回去。" },
-      { speaker: "narrator", text: "你看着他们，也看着手里的错题本。你忽然明白，拒绝和答应之间，还可以有一种叫边界的东西。" }
+      { speaker: "protagonist", text: "……" },
+      { speaker: "narrator", text: "你看着他们，也看着手里的错题本。拒绝、答应、折中，每一种回应都像一条还没走出去的小路。" }
     ],
     choice_prompt: "请选择你的回应",
     choice_mode: "single",
@@ -253,16 +253,15 @@ export const visual_novel_scenes: VisualNovelScene[] = [
     status_text: "试着说明",
     background_key: "scene_family_table",
     character_keys: [],
-    real_text: ["本周复习计划", "错题分类", "睡眠时间"],
+    real_text: ["饭菜", "书包", "温暖灯光"],
     ui_text: ["支线事件：家庭沟通", "家庭压力 ↓", "支持值 ↑", "请选择回应方式"],
     narration:
       "餐桌上的灯很暖，暖到你更难开口。父母没有催排名，只是把饭菜往你面前推了推。",
     dialogue: [
       { speaker: "mother", text: "最近是不是很累？" },
       { speaker: "father", text: "我们不是想给你压力，只是希望你别后悔。" },
-      { speaker: "protagonist", text: "我现在也会紧张，但我有在调整。" },
-      { speaker: "protagonist", text: "这是我接下来的复习安排。" },
-      { speaker: "mother", text: "那我们一起配合你。" }
+      { speaker: "protagonist", text: "……" },
+      { speaker: "narrator", text: "筷子轻轻碰到碗沿。你知道有些话如果说出口，今晚的空气会变得不一样。" }
     ],
     choice_prompt: "请选择回应方式",
     choice_mode: "single",
@@ -313,8 +312,8 @@ export const visual_novel_scenes: VisualNovelScene[] = [
     dialogue: [
       { speaker: "teacher", text: "这次有些同学进步很明显，说明方法开始起作用了。" },
       { speaker: "friend_1", text: "你真的追上来了。" },
-      { speaker: "protagonist", text: "先别飘，继续按节奏来。" },
-      { speaker: "narrator", text: "你轻轻合上成绩单，又翻开错题本。原来信心也可以很安静。" }
+      { speaker: "protagonist", text: "……" },
+      { speaker: "narrator", text: "成绩单在手里变轻了一点。开心、谨慎、想继续往前的念头，都还没有被你说出口。" }
     ],
     choice_prompt: "请选择下一步策略",
     choice_mode: "single",
@@ -364,7 +363,7 @@ export const visual_novel_scenes: VisualNovelScene[] = [
       "雨水顺着窗玻璃往下滑。模拟测试的红叉散在卷面上，你盯着它们太久，连太阳穴都开始发胀。",
     dialogue: [
       { speaker: "teacher", text: "你最近是不是太紧了？" },
-      { speaker: "protagonist", text: "我怕最后掉下来。" },
+      { speaker: "protagonist", text: "……" },
       { speaker: "teacher", text: "最后这段时间，不是把自己逼到极限，而是把已经会的东西稳稳拿住。" },
       { speaker: "teacher", text: "最后二十天，你想继续冲，还是先把自己稳住？" }
     ],
@@ -417,7 +416,7 @@ export const visual_novel_scenes: VisualNovelScene[] = [
     dialogue: [
       { speaker: "mother", text: "别想太多，正常考。" },
       { speaker: "father", text: "考完回来吃饭。" },
-      { speaker: "protagonist", text: "嗯，我进去了。" },
+      { speaker: "protagonist", text: "……" },
       { speaker: "narrator", text: "你看了一眼考场入口。那不是终点的门，更像是这一百天终于交到你手里的门把。" }
     ],
     choice_prompt: "请选择入场方式",
@@ -469,8 +468,8 @@ export const visual_novel_scenes: VisualNovelScene[] = [
     dialogue: [
       { speaker: "courier", text: "你的录取通知书到了。" },
       { speaker: "protagonist", text: "谢谢。" },
-      { speaker: "protagonist", text: "原来高三留下的不只是分数。" },
-      { speaker: "protagonist", text: "下一站，我会继续往前走。" }
+      { speaker: "protagonist", text: "……" },
+      { speaker: "narrator", text: "信封压在掌心，轻得像一张纸，又重得像整个夏天。还有一些东西，等着你亲手保存。" }
     ],
     choice_prompt: "依次点亮你想保存的东西",
     choice_mode: "collect_all",
