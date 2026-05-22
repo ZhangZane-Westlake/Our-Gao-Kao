@@ -85,13 +85,19 @@ export interface VisualNovelEnding {
   title: string;
   subtitle: string;
   body: string;
-  saved_items: string[];
+  final_state: VisualNovelFinalState;
+}
+
+export interface VisualNovelFinalState {
+  title: string;
+  body: string;
 }
 
 export interface VisualNovelState {
   save_version: 1;
   current_scene_id: SceneId;
   stats: VisualNovelStats;
+  last_effects: StatEffects;
   unlocked_items: string[];
   selected_collectible_choice_ids: string[];
   choice_history: ChoiceRecord[];

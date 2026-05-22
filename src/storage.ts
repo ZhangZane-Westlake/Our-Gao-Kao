@@ -20,7 +20,7 @@ export function load_saved_state(): VisualNovelState | null {
       return null;
     }
 
-    return parsed_state as VisualNovelState;
+    return { ...parsed_state, last_effects: parsed_state.last_effects ?? {} } as VisualNovelState;
   } catch {
     window.localStorage.removeItem(storage_key);
     return null;

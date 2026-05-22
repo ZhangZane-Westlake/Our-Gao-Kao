@@ -96,7 +96,7 @@ export const visual_novel_scenes: VisualNovelScene[] = [
     days_left: 82,
     status_text: "受挫",
     background_key: "scene_mock_score_classroom",
-    character_keys: ["protagonist_tired_uniform", "teacher_classroom", "deskmate_uniform"],
+    character_keys: [],
     real_text: ["一模成绩"],
     ui_text: ["事件触发：一模失利", "心态 -12", "压力 +15", "请选择应对方式"],
     narration:
@@ -252,7 +252,7 @@ export const visual_novel_scenes: VisualNovelScene[] = [
     days_left: 61,
     status_text: "试着说明",
     background_key: "scene_family_table",
-    character_keys: ["protagonist_white_tshirt_home", "mother_home", "father_home"],
+    character_keys: [],
     real_text: ["本周复习计划", "错题分类", "睡眠时间"],
     ui_text: ["支线事件：家庭沟通", "家庭压力 ↓", "支持值 ↑", "请选择回应方式"],
     narration:
